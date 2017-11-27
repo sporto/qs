@@ -1,0 +1,14 @@
+{
+  "name": "qs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:sporto/qs.git",
+  "author": "<s@porto5.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "elm-test": "^0.18.10"
+  },
+  "scripts": {
+    "test": "elm-test"
+  }
+}
