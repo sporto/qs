@@ -6,5 +6,6 @@ import QSTest
 
 suite : Test
 suite =
-    [ QSTest.all
-    ]
+    describe "suite"
+        [ QSTest.all
+        ]

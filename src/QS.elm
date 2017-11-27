@@ -1,7 +1,6 @@
 module QS exposing (..)
 
 import Dict
-import Erl.Query
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
@@ -26,7 +25,7 @@ type alias Query =
 
 
 boolToString =
-    Shared.Utils.boolToString
+    Encode.bool >> Encode.encode 0
 
 
 {-|
@@ -34,8 +33,13 @@ boolToString =
     This follows https://github.com/ljharb/qs parsing
 -}
 parseQuery : String -> Query
-parseQuery search =
+parseQuery queryString =
     let
+        trimmed =
+            queryString
+                |> String.split "?"
+                |> String.join ""
+
         addToQuery : ( String, String ) -> Query -> Query
         addToQuery ( key, val ) query =
             if String.endsWith "[]" key then
@@ -66,11 +70,36 @@ parseQuery search =
                     _ ->
                         setQuery key (QueryString val) query
     in
-        if search == "" then
+        if String.isEmpty trimmed then
             emptyQuery
         else
-            Erl.Query.parse search
+            trimmed
+                |> String.split "&"
+                |> List.map queryStringElementToTuple
                 |> List.foldl addToQuery emptyQuery
+
+
+{-| @priv
+-}
+queryStringElementToTuple : String -> ( String, String )
+queryStringElementToTuple element =
+    let
+        splitted =
+            String.split "=" element
+
+        first =
+            Maybe.withDefault "" (List.head splitted)
+
+        firstDecoded =
+            Http.decodeUri first |> Maybe.withDefault ""
+
+        second =
+            Maybe.withDefault "" (List.head (List.drop 1 splitted))
+
+        secondDecoded =
+            Http.decodeUri second |> Maybe.withDefault ""
+    in
+        ( firstDecoded, secondDecoded )
 
 
 {-|
@@ -167,29 +196,14 @@ mergeQuery =
     Dict.union
 
 
-mergeQueryInLocation : Query -> AppLocation -> AppLocation
-mergeQueryInLocation query location =
-    { location | query = mergeQuery query location.query }
-
-
 removeQuery : String -> Query -> Query
 removeQuery key query =
     Dict.remove key query
 
 
-removeQueryInLocation : String -> AppLocation -> AppLocation
-removeQueryInLocation key location =
-    { location | query = removeQuery key location.query }
-
-
 setQuery : String -> QueryValue -> Query -> Query
 setQuery key value query =
     Dict.insert key value query
-
-
-setQueryInLocation : String -> QueryValue -> AppLocation -> AppLocation
-setQueryInLocation key value location =
-    { location | query = setQuery key value location.query }
 
 
 getQueryValues : String -> Query -> Maybe QueryValue
