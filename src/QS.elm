@@ -9,6 +9,27 @@ module QS
         , queryToString
         )
 
+{-| Parse an manipulate query strings
+
+# Types
+
+@docs Query, QueryValue, ParseConfig
+
+# Parse
+
+@docs parse, parseConfig, parseBooleans
+
+# Serialize
+
+@docs queryToString
+
+# Decode
+
+# Endoce
+
+# Transform
+-}
+
 import Dict
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -275,8 +296,22 @@ querySegmentToTuple element =
 
 
 {-|
+Serialize the query
+This follows https://github.com/ljharb/qs serialization
 
-    This follows https://github.com/ljharb/qs serialization
+    queryToString Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
+
+    ==
+
+    "?a=1&b=2"
+
+List are serialized by adding []
+
+    Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
+
+    ==
+
+    "?a%5B%5D=1&a%5B%5D=2" ("?a[]=1&a[]=2")
 -}
 queryToString : Query -> String
 queryToString query =
