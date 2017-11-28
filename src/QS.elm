@@ -20,6 +20,12 @@ type QueryValue
     | QueryUnrecognised Decode.Value
 
 
+type ParseValue
+    = ParseValueEmpty
+    | ParseValueBool Bool
+    | ParseValueString String
+
+
 type alias Query =
     Dict.Dict String QueryValue
 
@@ -61,32 +67,86 @@ addSegmentToQuery segment query =
             let
                 newKey =
                     String.dropRight 2 key
-
-                currentVals =
-                    getQueryValues newKey query
-
-                newVals =
-                    case currentVals of
-                        Just (QueryStringList vals) ->
-                            QueryStringList (List.append vals [ val ])
-
-                        _ ->
-                            QueryStringList [ val ]
             in
-                setQuery newKey newVals query
+                addListValToQuery newKey val query
         else
-            case val of
-                "" ->
-                    query
+            addValToQuery key val query
 
-                "true" ->
-                    setQuery key (QueryBool True) query
 
-                "false" ->
-                    setQuery key (QueryBool False) query
+{-| @priv
+-}
+addListValToQuery : String -> String -> Query -> Query
+addListValToQuery key val query =
+    let
+        currentVals =
+            getQueryValues key query
+
+        newValsForBool bool =
+            case currentVals of
+                Just (QueryStringList vals) ->
+                    -- If the previous ones are string, then this one is string too
+                    QueryStringList (List.append vals [ val ])
+
+                Just (QueryBoolList vals) ->
+                    QueryBoolList (List.append vals [ bool ])
 
                 _ ->
-                    setQuery key (QueryString val) query
+                    QueryBoolList [ bool ]
+
+        newValsForStr str =
+            case currentVals of
+                Just (QueryStringList vals) ->
+                    -- If the previous ones are string, then this one is string too
+                    QueryStringList (List.append vals [ str ])
+
+                Just (QueryBoolList vals) ->
+                    QueryStringList (List.append (List.map boolToString vals) [ str ])
+
+                _ ->
+                    QueryStringList [ str ]
+    in
+        case valueToParseValue val of
+            ParseValueEmpty ->
+                query
+
+            ParseValueBool bool ->
+                setQuery key (newValsForBool bool) query
+
+            ParseValueString str ->
+                setQuery key (newValsForStr str) query
+
+
+addValToQuery : String -> String -> Query -> Query
+addValToQuery key val query =
+    case valueToParseValue val of
+        ParseValueEmpty ->
+            query
+
+        ParseValueBool bool ->
+            setQuery key (QueryBool bool) query
+
+        ParseValueString str ->
+            setQuery key (QueryString str) query
+
+
+valueToParseValue : String -> ParseValue
+valueToParseValue val =
+    let
+        trimmed =
+            String.trim val
+    in
+        case trimmed of
+            "" ->
+                ParseValueEmpty
+
+            "true" ->
+                ParseValueBool True
+
+            "false" ->
+                ParseValueBool False
+
+            _ ->
+                ParseValueString trimmed
 
 
 {-| @priv
@@ -113,6 +173,10 @@ querySegmentToTuple element =
             Http.decodeUri second |> Maybe.withDefault ""
     in
         ( firstDecoded, secondDecoded )
+
+
+
+-- TO STRING
 
 
 {-|

@@ -11,6 +11,12 @@ import QS exposing (..)
 -- parseQuery
 
 
+parseTest ( testCase, input, expected ) =
+    test testCase <|
+        \() ->
+            Expect.equal expected (parse input)
+
+
 parseTests : Test
 parseTests =
     let
@@ -23,7 +29,7 @@ parseTests =
               , "?a=1&b=2"
               , Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
               )
-            , ( "a list"
+            , ( "a list of strings"
               , "?a%5B%5D=1&a%5B%5D=2"
               , Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
               )
@@ -41,6 +47,12 @@ parseTests =
                     , ( "b", QueryBool False )
                     ]
               )
+            , ( "list of booleans"
+              , "?a[]=true&a[]=false"
+              , Dict.fromList
+                    [ ( "a", QueryBoolList [ True, False ] )
+                    ]
+              )
             , ( "rubish"
               , "33monkey*^222"
               , Dict.empty
@@ -52,18 +64,19 @@ parseTests =
                     ]
               )
             ]
-
-        makeTest ( testCase, input, expected ) =
-            test testCase <|
-                \() ->
-                    Expect.equal expected (parse input)
     in
-        List.map makeTest inputs
+        List.map parseTest inputs
             |> describe "parse"
 
 
 
 -- queryToString
+
+
+queryToStringTest ( testCase, input, expected ) =
+    test testCase <|
+        \() ->
+            Expect.equal expected (queryToString input)
 
 
 queryToStringTests : Test
@@ -99,13 +112,8 @@ queryToStringTests =
               , "?a%5B%5D=1&a%5B%5D=2"
               )
             ]
-
-        makeTest ( testCase, input, expected ) =
-            test testCase <|
-                \() ->
-                    Expect.equal expected (queryToString input)
     in
-        List.map makeTest inputs
+        List.map queryToStringTest inputs
             |> describe "queryToString"
 
 
