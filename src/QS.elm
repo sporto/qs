@@ -32,57 +32,70 @@ boolToString =
 
     This follows https://github.com/ljharb/qs parsing
 -}
-parseQuery : String -> Query
-parseQuery queryString =
+parse : String -> Query
+parse queryString =
     let
         trimmed =
             queryString
                 |> String.split "?"
                 |> String.join ""
-
-        addToQuery : ( String, String ) -> Query -> Query
-        addToQuery ( key, val ) query =
-            if String.endsWith "[]" key then
-                let
-                    newKey =
-                        String.dropRight 2 key
-
-                    currentVals =
-                        getQueryValues newKey query
-
-                    newVals =
-                        case currentVals of
-                            Just (QueryStringList vals) ->
-                                QueryStringList (List.append vals [ val ])
-
-                            _ ->
-                                QueryStringList [ val ]
-                in
-                    setQuery newKey newVals query
-            else
-                case val of
-                    "true" ->
-                        setQuery key (QueryBool True) query
-
-                    "false" ->
-                        setQuery key (QueryBool False) query
-
-                    _ ->
-                        setQuery key (QueryString val) query
     in
         if String.isEmpty trimmed then
             emptyQuery
         else
             trimmed
                 |> String.split "&"
-                |> List.map queryStringElementToTuple
-                |> List.foldl addToQuery emptyQuery
+                |> List.foldl addSegmentToQuery emptyQuery
 
 
 {-| @priv
+Add a segment like a=1 to the query
 -}
-queryStringElementToTuple : String -> ( String, String )
-queryStringElementToTuple element =
+addSegmentToQuery : String -> Query -> Query
+addSegmentToQuery segment query =
+    let
+        ( key, val ) =
+            querySegmentToTuple segment
+    in
+        if String.endsWith "[]" key then
+            let
+                newKey =
+                    String.dropRight 2 key
+
+                currentVals =
+                    getQueryValues newKey query
+
+                newVals =
+                    case currentVals of
+                        Just (QueryStringList vals) ->
+                            QueryStringList (List.append vals [ val ])
+
+                        _ ->
+                            QueryStringList [ val ]
+            in
+                setQuery newKey newVals query
+        else
+            case val of
+                "" ->
+                    query
+
+                "true" ->
+                    setQuery key (QueryBool True) query
+
+                "false" ->
+                    setQuery key (QueryBool False) query
+
+                _ ->
+                    setQuery key (QueryString val) query
+
+
+{-| @priv
+Split a segment into a tuple
+
+    "a=1" ==> ("a", "1")
+-}
+querySegmentToTuple : String -> ( String, String )
+querySegmentToTuple element =
     let
         splitted =
             String.split "=" element

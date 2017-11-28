@@ -11,8 +11,8 @@ import QS exposing (..)
 -- parseQuery
 
 
-parseQueryTests : Test
-parseQueryTests =
+parseTests : Test
+parseTests =
     let
         inputs =
             [ ( "one string"
@@ -41,15 +41,19 @@ parseQueryTests =
                     , ( "b", QueryBool False )
                     ]
               )
+            , ( "rubish"
+              , "33monkey*^222"
+              , Dict.empty
+              )
             ]
 
         makeTest ( testCase, input, expected ) =
             test testCase <|
                 \() ->
-                    Expect.equal expected (parseQuery input)
+                    Expect.equal expected (parse input)
     in
         List.map makeTest inputs
-            |> describe "parseQuery"
+            |> describe "parse"
 
 
 
@@ -102,6 +106,6 @@ queryToStringTests =
 all : Test
 all =
     describe "QS"
-        [ parseQueryTests
+        [ parseTests
         , queryToStringTests
         ]
