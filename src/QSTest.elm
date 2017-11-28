@@ -45,6 +45,12 @@ parseTests =
               , "33monkey*^222"
               , Dict.empty
               )
+            , ( "incomplete"
+              , "33monkey*^222&a=1"
+              , Dict.fromList
+                    [ ( "a", QueryString "1" )
+                    ]
+              )
             ]
 
         makeTest ( testCase, input, expected ) =
