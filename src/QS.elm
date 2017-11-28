@@ -1,4 +1,13 @@
-module QS exposing (..)
+module QS
+    exposing
+        ( Query
+        , QueryValue(..)
+        , ParseConfig
+        , parse
+        , parseConfig
+        , parseBooleans
+        , queryToString
+        )
 
 import Dict
 import Http
@@ -10,6 +19,37 @@ import Regex
 -- QUERY
 
 
+{-|
+A parsed query string
+
+    "?a[]=1&a[]=2&b=3"
+
+    ==
+
+    Dict.fromList
+        [ ( "a", QueryStringList [ "1", "2" ] )
+        , ( "b", QueryString "3" )
+        ]
+-}
+type alias Query =
+    Dict.Dict String QueryValue
+
+
+{-|
+Type for storing query values
+
+    "a=true" == QueryBool True
+
+    "a[]=true&a[]=false" == QueryBoolList [ True, False ]
+
+    "a=1" == QueryNumber 1
+
+    "a[]=1&a[]=2" == QueryNumberList [ 1, 2 ]
+
+    "a=z" == QueryString "z"
+
+    "a[]=x&a[]=y" == QueryStringList [ "x", "y" ]
+-}
 type QueryValue
     = QueryBool Bool
     | QueryBoolList (List Bool)
@@ -20,26 +60,69 @@ type QueryValue
     | QueryUnrecognised Decode.Value
 
 
+{-| @priv
+-}
 type ParseValue
     = ParseValueEmpty
     | ParseValueBool Bool
     | ParseValueString String
 
 
-type alias Query =
-    Dict.Dict String QueryValue
+
+-- PARSE Config
 
 
-boolToString =
-    Encode.bool >> Encode.encode 0
+type alias ParseConfigPriv =
+    { parseBooleans : Bool
+    }
+
+
+type ParseConfig
+    = ParseConfig ParseConfigPriv
+
+
+parseConfig : ParseConfig
+parseConfig =
+    ParseConfig
+        { parseBooleans = True
+        }
+
+
+parseBooleans : Bool -> ParseConfig -> ParseConfig
+parseBooleans val (ParseConfig config) =
+    ParseConfig { config | parseBooleans = val }
+
+
+
+-- PARSE
 
 
 {-|
+Parse a query string.
+This losely follows https://github.com/ljharb/qs parsing
 
-    This follows https://github.com/ljharb/qs parsing
+    QS.parse
+        QS.parseConfig
+        "?a=1&b=2"
+
+    == Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
+
+By default QS will parse "true" and "false" into booleans. You can change this with:
+
+    QS.parse
+        (QS.parseConfig |> QS.parseBooleans False)
+        "?a=false"
+
+Booleans in lists will be parsed too:
+
+    "?a[]=false&a[]=true" == Dict.fromList [ ( "a", QueryBoolList [ False, True ] ) ]
+
+But if you have non-booleans then the whole list will be strings:
+
+    "?a[]=false&a[]=monkey" == Dict.fromList [ ( "a", QueryStringList [ "false", "monkey" ] ) ]
 -}
-parse : String -> Query
-parse queryString =
+parse : ParseConfig -> String -> Query
+parse (ParseConfig config) queryString =
     let
         trimmed =
             queryString
@@ -51,14 +134,14 @@ parse queryString =
         else
             trimmed
                 |> String.split "&"
-                |> List.foldl addSegmentToQuery emptyQuery
+                |> List.foldl (addSegmentToQuery config) emptyQuery
 
 
 {-| @priv
 Add a segment like a=1 to the query
 -}
-addSegmentToQuery : String -> Query -> Query
-addSegmentToQuery segment query =
+addSegmentToQuery : ParseConfigPriv -> String -> Query -> Query
+addSegmentToQuery config segment query =
     let
         ( key, val ) =
             querySegmentToTuple segment
@@ -68,15 +151,15 @@ addSegmentToQuery segment query =
                 newKey =
                     String.dropRight 2 key
             in
-                addListValToQuery newKey val query
+                addListValToQuery config newKey val query
         else
-            addValToQuery key val query
+            addValToQuery config key val query
 
 
 {-| @priv
 -}
-addListValToQuery : String -> String -> Query -> Query
-addListValToQuery key val query =
+addListValToQuery : ParseConfigPriv -> String -> String -> Query -> Query
+addListValToQuery config key val query =
     let
         currentVals =
             getQueryValues key query
@@ -105,7 +188,7 @@ addListValToQuery key val query =
                 _ ->
                     QueryStringList [ str ]
     in
-        case valueToParseValue val of
+        case valueToParseValue config val of
             ParseValueEmpty ->
                 query
 
@@ -116,9 +199,11 @@ addListValToQuery key val query =
                 setQuery key (newValsForStr str) query
 
 
-addValToQuery : String -> String -> Query -> Query
-addValToQuery key val query =
-    case valueToParseValue val of
+{-| @priv
+-}
+addValToQuery : ParseConfigPriv -> String -> String -> Query -> Query
+addValToQuery config key val query =
+    case valueToParseValue config val of
         ParseValueEmpty ->
             query
 
@@ -129,24 +214,34 @@ addValToQuery key val query =
             setQuery key (QueryString str) query
 
 
-valueToParseValue : String -> ParseValue
-valueToParseValue val =
+{-| @priv
+-}
+valueToParseValue : ParseConfigPriv -> String -> ParseValue
+valueToParseValue config val =
     let
         trimmed =
             String.trim val
     in
-        case trimmed of
-            "" ->
-                ParseValueEmpty
+        if config.parseBooleans then
+            case trimmed of
+                "" ->
+                    ParseValueEmpty
 
-            "true" ->
-                ParseValueBool True
+                "true" ->
+                    ParseValueBool True
 
-            "false" ->
-                ParseValueBool False
+                "false" ->
+                    ParseValueBool False
 
-            _ ->
-                ParseValueString trimmed
+                _ ->
+                    ParseValueString trimmed
+        else
+            case trimmed of
+                "" ->
+                    ParseValueEmpty
+
+                _ ->
+                    ParseValueString trimmed
 
 
 {-| @priv
@@ -387,3 +482,11 @@ encodeQuery query =
             |> Dict.toList
             |> List.map encodeQueryTuple
             |> Encode.object
+
+
+
+-- UTILS
+
+
+boolToString =
+    Encode.bool >> Encode.encode 0
