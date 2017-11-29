@@ -89,7 +89,15 @@ parseTests =
                     ]
               )
 
-            -- Numbers TODO
+            -- Numbers
+            , ( "parse a number"
+              , config
+              , "?a=1"
+              , Dict.fromList
+                    [ ( "a", QueryNumber 1 )
+                    ]
+              )
+
             -- Incomplete
             , ( "rubish"
               , config

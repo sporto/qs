@@ -72,36 +72,47 @@ Type for storing query values
 
     "a[]=x&a[]=y" == QueryStringList [ "x", "y" ]
 -}
+type Value
+    = ValueBool Bool
+    | ValueNumber Float
+    | ValueString String
+    | ValueUnrecognised Decode.Value
+
+
+valueToString : Value -> String
+valueToString value =
+    case value of
+        ValueBool bool ->
+            boolToString bool
+
+        ValueNumber num ->
+            numberToString num
+
+        ValueString str ->
+            str
+
+        ValueUnrecognised v ->
+            ""
+
+
 type QueryValue
-    = QueryBool Bool
-    | QueryBoolList (List Bool)
-    | QueryNumber Float
-    | QueryNumberList (List Float)
-    | QueryString String
-    | QueryStringList (List String)
-    | QueryUnrecognised Decode.Value
-
-
-{-| @priv
--}
-type ParseValue
-    = ParseValueEmpty
-    | ParseValueBool Bool
-    | ParseValueString String
+    = QueryValueOne Value
+    | QueryValueList (List Value)
 
 
 
 -- PARSE Config
 
 
-type alias ParseConfigPriv =
+type alias ConfigPriv =
     { encodeBrackets : Bool
     , parseBooleans : Bool
+    , parseNumbers : Bool
     }
 
 
 type Config
-    = Config ParseConfigPriv
+    = Config ConfigPriv
 
 
 config : Config
@@ -109,6 +120,7 @@ config =
     Config
         { encodeBrackets = True
         , parseBooleans = True
+        , parseNumbers = True
         }
 
 
@@ -136,6 +148,8 @@ This losely follows https://github.com/ljharb/qs parsing
 
     == Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
 
+## Booleans
+
 By default QS will parse "true" and "false" into booleans. You can change this with:
 
     QS.parse
@@ -149,6 +163,16 @@ Booleans in lists will be parsed too:
 But if you have non-booleans then the whole list will be strings:
 
     "?a[]=false&a[]=monkey" == Dict.fromList [ ( "a", QueryStringList [ "false", "monkey" ] ) ]
+
+## Numbers
+
+The same applies for numbers, by default QS will try to parse numbers
+
+    QS.parse QS.config "?a=1"
+
+    ==
+
+    Dict.fromList [ ( "a", QueryNumber 1 ) ]
 -}
 parse : Config -> String -> Query
 parse (Config config) queryString =
@@ -169,7 +193,7 @@ parse (Config config) queryString =
 {-| @priv
 Add a segment like a=1 to the query
 -}
-addSegmentToQuery : ParseConfigPriv -> String -> Query -> Query
+addSegmentToQuery : ConfigPriv -> String -> Query -> Query
 addSegmentToQuery config segment query =
     let
         ( key, val ) =
@@ -182,95 +206,96 @@ addSegmentToQuery config segment query =
             in
                 addListValToQuery config newKey val query
         else
-            addValToQuery config key val query
+            addUniqueValToQuery config key val query
 
 
 {-| @priv
 -}
-addListValToQuery : ParseConfigPriv -> String -> String -> Query -> Query
-addListValToQuery config key val query =
+addListValToQuery : ConfigPriv -> String -> String -> Query -> Query
+addListValToQuery config key rawValue query =
     let
         currentVals =
             getQueryValues key query
 
-        newValsForBool bool =
+        add value =
             case currentVals of
-                Just (QueryStringList vals) ->
-                    -- If the previous ones are string, then this one is string too
-                    QueryStringList (List.append vals [ val ])
+                Just (QueryValueList vals) ->
+                    QueryValueList (List.append vals [ value ])
 
-                Just (QueryBoolList vals) ->
-                    QueryBoolList (List.append vals [ bool ])
+                Just (QueryValueOne preValue) ->
+                    QueryValueList [ preValue, value ]
 
-                _ ->
-                    QueryBoolList [ bool ]
-
-        newValsForStr str =
-            case currentVals of
-                Just (QueryStringList vals) ->
-                    -- If the previous ones are string, then this one is string too
-                    QueryStringList (List.append vals [ str ])
-
-                Just (QueryBoolList vals) ->
-                    QueryStringList (List.append (List.map boolToString vals) [ str ])
-
-                _ ->
-                    QueryStringList [ str ]
+                Nothing ->
+                    QueryValueList [ value ]
     in
-        case valueToParseValue config val of
-            ParseValueEmpty ->
+        case rawValueToValue config rawValue of
+            Nothing ->
                 query
 
-            ParseValueBool bool ->
-                setQuery key (newValsForBool bool) query
-
-            ParseValueString str ->
-                setQuery key (newValsForStr str) query
+            Just value ->
+                setQuery key (add value) query
 
 
 {-| @priv
 -}
-addValToQuery : ParseConfigPriv -> String -> String -> Query -> Query
-addValToQuery config key val query =
-    case valueToParseValue config val of
-        ParseValueEmpty ->
+addUniqueValToQuery : ConfigPriv -> String -> String -> Query -> Query
+addUniqueValToQuery config key val query =
+    case rawValueToValue config val of
+        Nothing ->
             query
 
-        ParseValueBool bool ->
-            setQuery key (QueryBool bool) query
-
-        ParseValueString str ->
-            setQuery key (QueryString str) query
+        Just value ->
+            setQuery key (QueryValueOne value) query
 
 
 {-| @priv
 -}
-valueToParseValue : ParseConfigPriv -> String -> ParseValue
-valueToParseValue config val =
+rawValueToValue : ConfigPriv -> String -> Maybe Value
+rawValueToValue config val =
     let
         trimmed =
             String.trim val
-    in
-        if config.parseBooleans then
-            case trimmed of
-                "" ->
-                    ParseValueEmpty
 
+        isEmpty =
+            trimmed == ""
+
+        true =
+            "true"
+
+        false =
+            "false"
+
+        isBool =
+            trimmed == true || trimmed == false
+
+        maybeFloat =
+            String.toFloat trimmed
+                |> Result.toMaybe
+
+        isNum =
+            maybeFloat /= Nothing
+    in
+        if isEmpty then
+            Nothing
+        else if isBool && config.parseBooleans then
+            case trimmed of
                 "true" ->
-                    ParseValueBool True
+                    ValueBool True |> Just
 
                 "false" ->
-                    ParseValueBool False
+                    ValueBool False |> Just
 
                 _ ->
-                    ParseValueString trimmed
+                    ValueString trimmed |> Just
+        else if isNum && config.parseNumbers then
+            case maybeFloat of
+                Just n ->
+                    ValueNumber n |> Just
+
+                Nothing ->
+                    ValueString trimmed |> Just
         else
-            case trimmed of
-                "" ->
-                    ParseValueEmpty
-
-                _ ->
-                    ParseValueString trimmed
+            ValueString trimmed |> Just
 
 
 {-| @priv
@@ -362,30 +387,15 @@ serialize (Config config) query =
                         |> List.map (\val -> encodedKey ++ "=" ++ encodeVal val)
                         |> List.append acc
 
-            addKey ( key, value ) acc =
-                case value of
-                    QueryBool bool ->
-                        addUniqueKey acc key (boolToString bool)
+            addKey ( key, queryVal ) acc =
+                case queryVal of
+                    QueryValueOne val ->
+                        addUniqueKey acc key (valueToString val)
 
-                    QueryBoolList bools ->
-                        List.map boolToString bools
+                    QueryValueList list ->
+                        list
+                            |> List.map valueToString
                             |> addListKey acc key
-
-                    QueryNumber num ->
-                        addUniqueKey acc key (toString num)
-
-                    QueryNumberList nums ->
-                        List.map toString nums
-                            |> addListKey acc key
-
-                    QueryString str ->
-                        addUniqueKey acc key str
-
-                    QueryStringList strs ->
-                        addListKey acc key strs
-
-                    _ ->
-                        acc
 
             values =
                 query
@@ -457,28 +467,13 @@ getQueryValuesAsStringList key query =
         values =
             getQueryValues key query
 
-        makeStringValues val =
-            case val of
-                QueryBool bool ->
-                    [ boolToString bool ]
+        makeStringValues queryVal =
+            case queryVal of
+                QueryValueOne val ->
+                    [ valueToString val ]
 
-                QueryBoolList bools ->
-                    List.map boolToString bools
-
-                QueryNumber num ->
-                    [ toString num ]
-
-                QueryNumberList nums ->
-                    List.map toString nums
-
-                QueryString str ->
-                    [ str ]
-
-                QueryStringList strs ->
-                    strs
-
-                QueryUnrecognised _ ->
-                    []
+                QueryValueList list ->
+                    List.map valueToString list
     in
         Maybe.map makeStringValues values
             |> Maybe.withDefault []
@@ -490,54 +485,29 @@ getQueryValuesAsStringList key query =
 
 queryDecoder : Decoder Query
 queryDecoder =
-    let
-        valueDecoder =
-            Decode.oneOf
-                [ Decode.map QueryString Decode.string
-                , Decode.map QueryStringList (Decode.list Decode.string)
-                , Decode.map QueryNumber Decode.float
-                , Decode.map QueryNumberList (Decode.list Decode.float)
-                , Decode.map QueryBool Decode.bool
-                , Decode.map QueryBoolList (Decode.list Decode.bool)
-                , Decode.map QueryUnrecognised Decode.value
-                ]
-    in
-        Decode.dict valueDecoder
+    Decode.dict queryValueDecoder
+
+
+queryValueDecoder : Decoder QueryValue
+queryValueDecoder =
+    Decode.oneOf
+        [ Decode.map QueryValueOne valueDecoder
+        , Decode.map QueryValueList (Decode.list valueDecoder)
+        ]
+
+
+valueDecoder : Decoder Value
+valueDecoder =
+    Decode.oneOf
+        [ Decode.map ValueBool Decode.bool
+        , Decode.map ValueNumber Decode.float
+        , Decode.map ValueString Decode.string
+        , Decode.map ValueUnrecognised Decode.value
+        ]
 
 
 
 -- ENCODE
-
-
-encodeQueryValue : QueryValue -> Encode.Value
-encodeQueryValue value =
-    case value of
-        QueryBool bool ->
-            Encode.bool bool
-
-        QueryBoolList list ->
-            list
-                |> List.map Encode.bool
-                |> Encode.list
-
-        QueryNumber num ->
-            Encode.float num
-
-        QueryNumberList list ->
-            list
-                |> List.map Encode.float
-                |> Encode.list
-
-        QueryString str ->
-            Encode.string str
-
-        QueryStringList list ->
-            list
-                |> List.map Encode.string
-                |> Encode.list
-
-        QueryUnrecognised value ->
-            value
 
 
 encodeQuery : Query -> Encode.Value
@@ -552,9 +522,41 @@ encodeQuery query =
             |> Encode.object
 
 
+encodeQueryValue : QueryValue -> Encode.Value
+encodeQueryValue value =
+    case value of
+        QueryValueOne value ->
+            encodeValue value
+
+        QueryValueList list ->
+            list
+                |> List.map encodeValue
+                |> Encode.list
+
+
+encodeValue : Value -> Encode.Value
+encodeValue value =
+    case value of
+        ValueString str ->
+            Encode.string str
+
+        ValueBool bool ->
+            Encode.bool bool
+
+        ValueNumber num ->
+            Encode.float num
+
+        ValueUnrecognised value ->
+            value
+
+
 
 -- UTILS
 
 
 boolToString =
     Encode.bool >> Encode.encode 0
+
+
+numberToString =
+    toString
