@@ -138,6 +138,11 @@ serializeTests =
               , Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
               , "?a[]=1&a[]=2"
               )
+            , ( "brackets in value are always encoded"
+              , serializeConfig |> encodeBrackets False
+              , Dict.fromList [ ( "a", QueryStringList [ "1[]", "2" ] ) ]
+              , "?a[]=1%5B%5D&a[]=2"
+              )
             , ( "boolean"
               , serializeConfig
               , Dict.fromList [ ( "a", QueryBool True ) ]

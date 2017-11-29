@@ -326,7 +326,7 @@ encodeBrackets val (SerializeConfig config) =
 Serialize the query
 This follows https://github.com/ljharb/qs serialization
 
-    QS.serialize config <| Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
+    QS.serialize Qs.serializeConfig <| Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
 
     ==
 
@@ -334,11 +334,20 @@ This follows https://github.com/ljharb/qs serialization
 
 List are serialized by adding []
 
-    QS.serialize config <| Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
+    QS.serialize Qs.serializeConfig <| Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
 
     ==
 
     "?a%5B%5D=1&a%5B%5D=2" ("?a[]=1&a[]=2")
+
+If your don't want to encode [] use `encodeBrackets False`
+
+    QS.serialize
+        (Qs.serializeConfig |> encodeBrackets False) ...
+
+    ==
+
+    "?a[]=1&a[]=2"
 -}
 serialize : SerializeConfig -> Query -> String
 serialize (SerializeConfig config) query =
@@ -348,12 +357,27 @@ serialize (SerializeConfig config) query =
         let
             addUniqueKey : List String -> String -> String -> List String
             addUniqueKey acc key value =
-                acc ++ [ key ++ "=" ++ value ]
+                let
+                    encodedKey =
+                        percentageEncode config.encodeBrackets key
+
+                    encodedVal =
+                        percentageEncode True value
+                in
+                    acc ++ [ encodedKey ++ "=" ++ encodedVal ]
 
             addListKey : List String -> String -> List String -> List String
             addListKey acc key values =
-                List.map (\val -> key ++ "[]=" ++ val) values
-                    |> List.append acc
+                let
+                    encodedKey =
+                        percentageEncode config.encodeBrackets (key ++ "[]")
+
+                    encodeVal v =
+                        percentageEncode True v
+                in
+                    values
+                        |> List.map (\val -> encodedKey ++ "=" ++ encodeVal val)
+                        |> List.append acc
 
             addKey ( key, value ) acc =
                 case value of
@@ -385,7 +409,6 @@ serialize (SerializeConfig config) query =
                     |> Dict.toList
                     |> List.foldl addKey []
                     |> String.join "&"
-                    |> percentageEncode config
         in
             "?" ++ values
 
@@ -395,19 +418,17 @@ serialize (SerializeConfig config) query =
     encodeUri encodes = and &
     We want those as normal chars
 -}
-percentageEncode : SerializeConfigPriv -> String -> String
-percentageEncode config =
+percentageEncode : Bool -> String -> String
+percentageEncode encodeBrackets =
     let
         maybeDecodeBrackets =
-            if config.encodeBrackets then
+            if encodeBrackets then
                 identity
             else
                 decodeSymbol "["
                     >> decodeSymbol "]"
     in
         Http.encodeUri
-            >> decodeSymbol "="
-            >> decodeSymbol "&"
             >> maybeDecodeBrackets
 
 
