@@ -6,22 +6,24 @@ module QS
         , parse
         , parseConfig
         , parseBooleans
-        , queryToString
+        , SerializeConfig
+        , serialize
+        , serializeConfig
         )
 
 {-| Parse an manipulate query strings
 
 # Types
 
-@docs Query, QueryValue, ParseConfig
+@docs Query, QueryValue
 
 # Parse
 
-@docs parse, parseConfig, parseBooleans
+@docs ParseConfig, parse, parseConfig, parseBooleans
 
 # Serialize
 
-@docs queryToString
+@docs SerializeConfig, serialize, serializeConfig
 
 # Decode
 
@@ -292,14 +294,33 @@ querySegmentToTuple element =
 
 
 
--- TO STRING
+-- Serialize Config
+
+
+type alias SerializeConfigPriv =
+    { encodeBrackets : Bool
+    }
+
+
+type SerializeConfig
+    = SerializeConfig SerializeConfigPriv
+
+
+serializeConfig =
+    SerializeConfig
+        { encodeBrackets = True
+        }
+
+
+
+-- Serialize
 
 
 {-|
 Serialize the query
 This follows https://github.com/ljharb/qs serialization
 
-    queryToString Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
+    QS.serialize config <| Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
 
     ==
 
@@ -307,14 +328,14 @@ This follows https://github.com/ljharb/qs serialization
 
 List are serialized by adding []
 
-    Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
+    QS.serialize config <| Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
 
     ==
 
     "?a%5B%5D=1&a%5B%5D=2" ("?a[]=1&a[]=2")
 -}
-queryToString : Query -> String
-queryToString query =
+serialize : SerializeConfig -> Query -> String
+serialize (SerializeConfig config) query =
     if Dict.isEmpty query then
         ""
     else

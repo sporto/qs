@@ -108,53 +108,60 @@ parseTests =
 -- queryToString
 
 
-queryToStringTest ( testCase, input, expected ) =
+serializeTest ( testCase, config, input, expected ) =
     test testCase <|
         \() ->
-            Expect.equal expected (queryToString input)
+            Expect.equal expected (serialize config input)
 
 
-queryToStringTests : Test
-queryToStringTests =
+serializeTests : Test
+serializeTests =
     let
         inputs =
             [ ( "one string"
+              , serializeConfig
               , Dict.fromList [ ( "a", QueryString "1" ) ]
               , "?a=1"
               )
             , ( "two strings"
+              , serializeConfig
               , Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
               , "?a=1&b=2"
               )
             , ( "list of strings"
+              , serializeConfig
               , Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
               , "?a%5B%5D=1&a%5B%5D=2"
               )
             , ( "boolean"
+              , serializeConfig
               , Dict.fromList [ ( "a", QueryBool True ) ]
               , "?a=true"
               )
             , ( "list of booleans"
+              , serializeConfig
               , Dict.fromList [ ( "a", QueryBoolList [ True, False ] ) ]
               , "?a%5B%5D=true&a%5B%5D=false"
               )
             , ( "number"
+              , serializeConfig
               , Dict.fromList [ ( "a", QueryNumber 1 ) ]
               , "?a=1"
               )
             , ( "list of numbers"
+              , serializeConfig
               , Dict.fromList [ ( "a", QueryNumberList [ 1, 2 ] ) ]
               , "?a%5B%5D=1&a%5B%5D=2"
               )
             ]
     in
-        List.map queryToStringTest inputs
-            |> describe "queryToString"
+        List.map serializeTest inputs
+            |> describe "serialize"
 
 
 all : Test
 all =
     describe "QS"
         [ parseTests
-        , queryToStringTests
+        , serializeTests
         ]
