@@ -2,13 +2,11 @@ module QS
     exposing
         ( Query
         , QueryValue(..)
-        , ParseConfig
         , parse
-        , parseConfig
-        , parseBooleans
-        , SerializeConfig
         , serialize
-        , serializeConfig
+        , Config
+        , config
+        , parseBooleans
         , encodeBrackets
         )
 
@@ -18,13 +16,13 @@ module QS
 
 @docs Query, QueryValue
 
-# Parse
+# Parse and Serialize
 
-@docs ParseConfig, parse, parseConfig, parseBooleans
+@docs parse, serialize
 
-# Serialize
+# Config
 
-@docs SerializeConfig, serialize, serializeConfig, encodeBrackets
+@docs Config, config, parseBooleans, encodeBrackets
 
 # Decode
 
@@ -97,24 +95,31 @@ type ParseValue
 
 
 type alias ParseConfigPriv =
-    { parseBooleans : Bool
+    { encodeBrackets : Bool
+    , parseBooleans : Bool
     }
 
 
-type ParseConfig
-    = ParseConfig ParseConfigPriv
+type Config
+    = Config ParseConfigPriv
 
 
-parseConfig : ParseConfig
-parseConfig =
-    ParseConfig
-        { parseBooleans = True
+config : Config
+config =
+    Config
+        { encodeBrackets = True
+        , parseBooleans = True
         }
 
 
-parseBooleans : Bool -> ParseConfig -> ParseConfig
-parseBooleans val (ParseConfig config) =
-    ParseConfig { config | parseBooleans = val }
+encodeBrackets : Bool -> Config -> Config
+encodeBrackets val (Config config) =
+    Config { config | encodeBrackets = val }
+
+
+parseBooleans : Bool -> Config -> Config
+parseBooleans val (Config config) =
+    Config { config | parseBooleans = val }
 
 
 
@@ -126,7 +131,7 @@ Parse a query string.
 This losely follows https://github.com/ljharb/qs parsing
 
     QS.parse
-        QS.parseConfig
+        QS.config
         "?a=1&b=2"
 
     == Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
@@ -134,7 +139,7 @@ This losely follows https://github.com/ljharb/qs parsing
 By default QS will parse "true" and "false" into booleans. You can change this with:
 
     QS.parse
-        (QS.parseConfig |> QS.parseBooleans False)
+        (QS.config |> QS.parseBooleans False)
         "?a=false"
 
 Booleans in lists will be parsed too:
@@ -145,8 +150,8 @@ But if you have non-booleans then the whole list will be strings:
 
     "?a[]=false&a[]=monkey" == Dict.fromList [ ( "a", QueryStringList [ "false", "monkey" ] ) ]
 -}
-parse : ParseConfig -> String -> Query
-parse (ParseConfig config) queryString =
+parse : Config -> String -> Query
+parse (Config config) queryString =
     let
         trimmed =
             queryString
@@ -295,30 +300,6 @@ querySegmentToTuple element =
 
 
 
--- Serialize Config
-
-
-type alias SerializeConfigPriv =
-    { encodeBrackets : Bool
-    }
-
-
-type SerializeConfig
-    = SerializeConfig SerializeConfigPriv
-
-
-serializeConfig =
-    SerializeConfig
-        { encodeBrackets = True
-        }
-
-
-encodeBrackets : Bool -> SerializeConfig -> SerializeConfig
-encodeBrackets val (SerializeConfig config) =
-    SerializeConfig { config | encodeBrackets = val }
-
-
-
 -- Serialize
 
 
@@ -326,7 +307,7 @@ encodeBrackets val (SerializeConfig config) =
 Serialize the query
 This follows https://github.com/ljharb/qs serialization
 
-    QS.serialize Qs.serializeConfig <| Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
+    QS.serialize Qs.config <| Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
 
     ==
 
@@ -334,23 +315,25 @@ This follows https://github.com/ljharb/qs serialization
 
 List are serialized by adding []
 
-    QS.serialize Qs.serializeConfig <| Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
+    QS.serialize Qs.config <| Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
 
     ==
 
     "?a%5B%5D=1&a%5B%5D=2" ("?a[]=1&a[]=2")
 
-If your don't want to encode [] use `encodeBrackets False`
+If your don't want to encode [] use `encodeBrackets False`.
 
     QS.serialize
-        (Qs.serializeConfig |> encodeBrackets False) ...
+        (Qs.config |> encodeBrackets False) ...
 
     ==
 
     "?a[]=1&a[]=2"
+
+However brackets in the value are always encoded.
 -}
-serialize : SerializeConfig -> Query -> String
-serialize (SerializeConfig config) query =
+serialize : Config -> Query -> String
+serialize (Config config) query =
     if Dict.isEmpty query then
         ""
     else

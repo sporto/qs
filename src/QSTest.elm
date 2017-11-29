@@ -22,35 +22,37 @@ parseTests =
     let
         inputs =
             [ ( "one string"
-              , parseConfig
+              , config
               , "?a=1"
               , Dict.fromList [ ( "a", QueryString "1" ) ]
               )
             , ( "two strings"
-              , parseConfig
+              , config
               , "?a=1&b=2"
               , Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
               )
             , ( "missing ?"
-              , parseConfig
+              , config
               , "a=1&b=2"
               , Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
               )
             , ( "a list of strings"
-              , parseConfig
+              , config
               , "?a%5B%5D=1&a%5B%5D=2"
               , Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
               )
             , ( "mixed"
-              , parseConfig
+              , config
               , "?a%5B%5D=1&a%5B%5D=2&b=3"
               , Dict.fromList
                     [ ( "a", QueryStringList [ "1", "2" ] )
                     , ( "b", QueryString "3" )
                     ]
               )
+
+            -- Booleans
             , ( "booleans"
-              , parseConfig
+              , config
               , "?a=true&b=false"
               , Dict.fromList
                     [ ( "a", QueryBool True )
@@ -58,7 +60,7 @@ parseTests =
                     ]
               )
             , ( "booleans as strings"
-              , parseConfig |> parseBooleans False
+              , config |> parseBooleans False
               , "?a=true&b=false"
               , Dict.fromList
                     [ ( "a", QueryString "true" )
@@ -66,33 +68,36 @@ parseTests =
                     ]
               )
             , ( "list of booleans"
-              , parseConfig
+              , config
               , "?a[]=true&a[]=false"
               , Dict.fromList
                     [ ( "a", QueryBoolList [ True, False ] )
                     ]
               )
             , ( "list of booleans as strings"
-              , parseConfig |> parseBooleans False
+              , config |> parseBooleans False
               , "?a[]=true&a[]=false"
               , Dict.fromList
                     [ ( "a", QueryStringList [ "true", "false" ] )
                     ]
               )
             , ( "list of mixed booleans and strings"
-              , parseConfig
+              , config
               , "?a[]=true&a[]=falso"
               , Dict.fromList
                     [ ( "a", QueryStringList [ "true", "falso" ] )
                     ]
               )
+
+            -- Numbers TODO
+            -- Incomplete
             , ( "rubish"
-              , parseConfig
+              , config
               , "33monkey*^222"
               , Dict.empty
               )
             , ( "incomplete"
-              , parseConfig
+              , config
               , "33monkey*^222&a=1"
               , Dict.fromList
                     [ ( "a", QueryString "1" )
@@ -119,47 +124,47 @@ serializeTests =
     let
         inputs =
             [ ( "one string"
-              , serializeConfig
+              , config
               , Dict.fromList [ ( "a", QueryString "1" ) ]
               , "?a=1"
               )
             , ( "two strings"
-              , serializeConfig
+              , config
               , Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
               , "?a=1&b=2"
               )
             , ( "list of strings"
-              , serializeConfig
+              , config
               , Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
               , "?a%5B%5D=1&a%5B%5D=2"
               )
             , ( "do not encode brackets"
-              , serializeConfig |> encodeBrackets False
+              , config |> encodeBrackets False
               , Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
               , "?a[]=1&a[]=2"
               )
             , ( "brackets in value are always encoded"
-              , serializeConfig |> encodeBrackets False
+              , config |> encodeBrackets False
               , Dict.fromList [ ( "a", QueryStringList [ "1[]", "2" ] ) ]
               , "?a[]=1%5B%5D&a[]=2"
               )
             , ( "boolean"
-              , serializeConfig
+              , config
               , Dict.fromList [ ( "a", QueryBool True ) ]
               , "?a=true"
               )
             , ( "list of booleans"
-              , serializeConfig
+              , config
               , Dict.fromList [ ( "a", QueryBoolList [ True, False ] ) ]
               , "?a%5B%5D=true&a%5B%5D=false"
               )
             , ( "number"
-              , serializeConfig
+              , config
               , Dict.fromList [ ( "a", QueryNumber 1 ) ]
               , "?a=1"
               )
             , ( "list of numbers"
-              , serializeConfig
+              , config
               , Dict.fromList [ ( "a", QueryNumberList [ 1, 2 ] ) ]
               , "?a%5B%5D=1&a%5B%5D=2"
               )
