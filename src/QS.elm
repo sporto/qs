@@ -9,6 +9,7 @@ module QS
         , SerializeConfig
         , serialize
         , serializeConfig
+        , encodeBrackets
         )
 
 {-| Parse an manipulate query strings
@@ -23,7 +24,7 @@ module QS
 
 # Serialize
 
-@docs SerializeConfig, serialize, serializeConfig
+@docs SerializeConfig, serialize, serializeConfig, encodeBrackets
 
 # Decode
 
@@ -312,6 +313,11 @@ serializeConfig =
         }
 
 
+encodeBrackets : Bool -> SerializeConfig -> SerializeConfig
+encodeBrackets val (SerializeConfig config) =
+    SerializeConfig { config | encodeBrackets = val }
+
+
 
 -- Serialize
 
@@ -379,7 +385,7 @@ serialize (SerializeConfig config) query =
                     |> Dict.toList
                     |> List.foldl addKey []
                     |> String.join "&"
-                    |> percentageEncode
+                    |> percentageEncode config
         in
             "?" ++ values
 
@@ -389,27 +395,29 @@ serialize (SerializeConfig config) query =
     encodeUri encodes = and &
     We want those as normal chars
 -}
-percentageEncode : String -> String
-percentageEncode =
-    Http.encodeUri
-        >> perEncodedEqualToSymbol
-        >> perEncodedAmpersandToSymbol
+percentageEncode : SerializeConfigPriv -> String -> String
+percentageEncode config =
+    let
+        maybeDecodeBrackets =
+            if config.encodeBrackets then
+                identity
+            else
+                decodeSymbol "["
+                    >> decodeSymbol "]"
+    in
+        Http.encodeUri
+            >> decodeSymbol "="
+            >> decodeSymbol "&"
+            >> maybeDecodeBrackets
 
 
-perEncodedEqual =
-    Http.encodeUri "="
-
-
-perEncodedAmpersand =
-    Http.encodeUri "&"
-
-
-perEncodedEqualToSymbol =
-    Regex.replace Regex.All (Regex.regex perEncodedEqual) (\_ -> "=")
-
-
-perEncodedAmpersandToSymbol =
-    Regex.replace Regex.All (Regex.regex perEncodedAmpersand) (\_ -> "&")
+decodeSymbol : String -> String -> String
+decodeSymbol symbol =
+    let
+        encoded =
+            Http.encodeUri symbol
+    in
+        Regex.replace Regex.All (Regex.regex encoded) (\_ -> symbol)
 
 
 emptyQuery : Query
