@@ -246,6 +246,41 @@ encodeTests =
             |> describe "encode"
 
 
+pushStrTest ( testCase, initialQuery, key, input, expected ) =
+    test testCase <|
+        \() ->
+            Expect.equal
+                expected
+                (pushStr key input initialQuery)
+
+
+pushStrTests =
+    let
+        inputs =
+            [ ( "It adds to an existing list"
+              , Dict.fromList [ ( "a", Many [ Str "x" ] ) ]
+              , "a"
+              , "z"
+              , Dict.fromList [ ( "a", Many [ Str "x", Str "z" ] ) ]
+              )
+            , ( "Adds new value"
+              , Dict.empty
+              , "a"
+              , "z"
+              , Dict.fromList [ ( "a", Many [ Str "z" ] ) ]
+              )
+            , ( "Promotes a value"
+              , Dict.fromList [ ( "a", One <| Str "x" ) ]
+              , "a"
+              , "z"
+              , Dict.fromList [ ( "a", Many [ Str "x", Str "z" ] ) ]
+              )
+            ]
+    in
+        List.map pushStrTest inputs
+            |> describe "pushStr"
+
+
 all : Test
 all =
     describe "QS"
@@ -253,4 +288,5 @@ all =
         , serializeTests
         , decoderTests
         , encodeTests
+        , pushStrTests
         ]
