@@ -1,8 +1,8 @@
 {
-    "version": "4.0.0",
-    "summary": "Example Project",
-    "repository": "https://github.com/user/project.git",
-    "license": "BSD-3-Clause",
+    "version": "1.0.0",
+    "summary": "QS",
+    "repository": "https://github.com/sporto/qs",
+    "license": "MIT",
     "source-directories": [
         "src"
     ],
