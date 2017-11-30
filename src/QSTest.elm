@@ -223,10 +223,34 @@ decoderTests =
             |> describe "decoder"
 
 
+encodeTest ( testCase, input, expected ) =
+    test testCase <|
+        \() ->
+            Expect.equal expected (Encode.encode 0 <| encode input)
+
+
+encodeTests =
+    let
+        inputs =
+            [ ( "It encodes one"
+              , Dict.fromList [ ( "a", One <| Text "x" ) ]
+              , """{"a":"x"}"""
+              )
+            , ( "It encodes a list"
+              , Dict.fromList [ ( "a", Many [ Text "x", Number 1, Boolean True ] ) ]
+              , """{"a":["x",1,true]}"""
+              )
+            ]
+    in
+        List.map encodeTest inputs
+            |> describe "encode"
+
+
 all : Test
 all =
     describe "QS"
         [ parseTests
         , serializeTests
         , decoderTests
+        , encodeTests
         ]

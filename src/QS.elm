@@ -11,6 +11,7 @@ module QS
         , parseNumbers
         , encodeBrackets
         , decoder
+        , encode
         )
 
 {-| Parse an manipulate query strings
@@ -27,11 +28,9 @@ module QS
 
 @docs Config, config, parseBooleans, parseNumbers, encodeBrackets
 
-# Decode
+# Decode and Encode
 
-@docs decoder
-
-# Endoce
+@docs decoder, encode
 
 # Transform
 -}
@@ -553,8 +552,8 @@ valueDecoder =
 -------------------------------------------------------------------------------
 
 
-encodeQuery : Query -> Encode.Value
-encodeQuery query =
+encode : Query -> Encode.Value
+encode query =
     let
         encodeQueryTuple ( key, val ) =
             ( key, encodeQueryValue val )
