@@ -8,6 +8,7 @@ module QS
         , Config
         , config
         , parseBooleans
+        , parseNumbers
         , encodeBrackets
         )
 
@@ -23,7 +24,7 @@ module QS
 
 # Config
 
-@docs Config, config, parseBooleans, encodeBrackets
+@docs Config, config, parseBooleans, parseNumbers, encodeBrackets
 
 # Decode
 
@@ -45,19 +46,28 @@ import Regex
 {-|
 A parsed query string
 
-    "?a[]=1&a[]=2&b=3"
+    "?a=x&b[]=1&b=2"
 
     ==
 
     Dict.fromList
-        [ ( "a", QueryStringList [ "1", "2" ] )
-        , ( "b", QueryString "3" )
+        [ ( "a", One <| Text "x" )
+        , ( "b", Many [ Number 1, Number 2 ] )
         ]
 -}
 type alias Query =
     Dict.Dict String OneOrMany
 
 
+{-|
+A query value can be a unique value (One) e.g.
+
+    a=1
+
+Or it can be a list (Many) e.g.
+
+    a[]=1&a[]=2
+-}
 type OneOrMany
     = One Primitive
     | Many (List Primitive)
@@ -66,17 +76,13 @@ type OneOrMany
 {-|
 Type for storing query values
 
-    "a=true" == QueryBool True
+    "a=x" == One <| Text "x"
 
-    "a[]=true&a[]=false" == QueryBoolList [ True, False ]
+    "a=1" == One <| Number 1
 
-    "a=1" == QueryNumber 1
+    "a=true" == One <| Boolean True
 
-    "a[]=1&a[]=2" == QueryNumberList [ 1, 2 ]
-
-    "a=z" == QueryString "z"
-
-    "a[]=x&a[]=y" == QueryStringList [ "x", "y" ]
+    "a[]=x&a[]=1&a[]=true" == Many [ Text "x", Number 1, Boolean True ]
 -}
 type Primitive
     = Boolean Bool
@@ -85,8 +91,10 @@ type Primitive
     | Unrecognised Decode.Value
 
 
-valueToString : Primitive -> String
-valueToString value =
+{-| @priv
+-}
+primitiveToString : Primitive -> String
+primitiveToString value =
     case value of
         Boolean bool ->
             boolToString bool
@@ -102,7 +110,7 @@ valueToString value =
 
 
 
--- PARSE Config
+-- Configuration
 
 
 type alias ConfigPriv =
@@ -112,10 +120,20 @@ type alias ConfigPriv =
     }
 
 
+{-|
+Opaque configuration type
+-}
 type Config
     = Config ConfigPriv
 
 
+{-|
+Get a default configuration
+
+    encodeBrackets = True
+    parseBooleans = True
+    parseNumbers = True
+-}
 config : Config
 config =
     Config
@@ -125,18 +143,52 @@ config =
         }
 
 
+{-|
+Wherever to encode brackets or not
+
+    QS.serialize (Qs.config |> Qs.encodeBrackets False) query
+
+    ==
+
+    "a[]=1&a[]=2"
+-}
 encodeBrackets : Bool -> Config -> Config
 encodeBrackets val (Config config) =
     Config { config | encodeBrackets = val }
 
 
+{-|
+Wherever to parse booleans. If false then "true" and "false" will be strings.
+
+    QS.parse (Qs.config |> Qs.parseBooleans False) "?a=true"
+
+    ==
+
+    Dict.fromList [ ("a", One <| Text "true") ]
+-}
 parseBooleans : Bool -> Config -> Config
 parseBooleans val (Config config) =
     Config { config | parseBooleans = val }
 
 
+{-|
+Wherever to parse numbers. If false then numbers will be strings.
 
+    QS.parse (Qs.config |> Qs.parseNumbers False) "?a=1"
+
+    ==
+
+    Dict.fromList [ ("a", One <| Text "1") ]
+-}
+parseNumbers : Bool -> Config -> Config
+parseNumbers val (Config config) =
+    Config { config | parseNumbers = val }
+
+
+
+-------------------------------------------------------------------------------
 -- PARSE
+-------------------------------------------------------------------------------
 
 
 {-|
@@ -145,9 +197,9 @@ This losely follows https://github.com/ljharb/qs parsing
 
     QS.parse
         QS.config
-        "?a=1&b=2"
+        "?a=1&b=x"
 
-    == Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
+    == Dict.fromList [ ( "a", One <| Number 1 ), ( "b", One <| Text "x" ) ]
 
 ## Booleans
 
@@ -157,14 +209,6 @@ By default QS will parse "true" and "false" into booleans. You can change this w
         (QS.config |> QS.parseBooleans False)
         "?a=false"
 
-Booleans in lists will be parsed too:
-
-    "?a[]=false&a[]=true" == Dict.fromList [ ( "a", Many [ False, True ] ) ]
-
-But if you have non-booleans then the whole list will be strings:
-
-    "?a[]=false&a[]=monkey" == Dict.fromList [ ( "a", Many [ "false", "monkey" ] ) ]
-
 ## Numbers
 
 The same applies for numbers, by default QS will try to parse numbers
@@ -173,7 +217,9 @@ The same applies for numbers, by default QS will try to parse numbers
 
     ==
 
-    Dict.fromList [ ( "a", One 1 ) ]
+    Dict.fromList [ ( "a", One <| Number 1 ) ]
+
+Change this with `parseNumbers False`
 -}
 parse : Config -> String -> Query
 parse (Config config) queryString =
@@ -326,7 +372,9 @@ querySegmentToTuple element =
 
 
 
+-------------------------------------------------------------------------------
 -- Serialize
+-------------------------------------------------------------------------------
 
 
 {-|
@@ -391,11 +439,11 @@ serialize (Config config) query =
             addKey ( key, queryVal ) acc =
                 case queryVal of
                     One val ->
-                        addUniqueKey acc key (valueToString val)
+                        addUniqueKey acc key (primitiveToString val)
 
                     Many list ->
                         list
-                            |> List.map valueToString
+                            |> List.map primitiveToString
                             |> addListKey acc key
 
             values =
@@ -407,32 +455,10 @@ serialize (Config config) query =
             "?" ++ values
 
 
-{-|
 
-    encodeUri encodes = and &
-    We want those as normal chars
--}
-percentageEncode : Bool -> String -> String
-percentageEncode encodeBrackets =
-    let
-        maybeDecodeBrackets =
-            if encodeBrackets then
-                identity
-            else
-                decodeSymbol "["
-                    >> decodeSymbol "]"
-    in
-        Http.encodeUri
-            >> maybeDecodeBrackets
-
-
-decodeSymbol : String -> String -> String
-decodeSymbol symbol =
-    let
-        encoded =
-            Http.encodeUri symbol
-    in
-        Regex.replace Regex.All (Regex.regex encoded) (\_ -> symbol)
+-------------------------------------------------------------------------------
+-- TRANSFORMATIONS
+-------------------------------------------------------------------------------
 
 
 emptyQuery : Query
@@ -471,17 +497,19 @@ getQueryValuesAsStringList key query =
         makeStringValues queryVal =
             case queryVal of
                 One val ->
-                    [ valueToString val ]
+                    [ primitiveToString val ]
 
                 Many list ->
-                    List.map valueToString list
+                    List.map primitiveToString list
     in
         Maybe.map makeStringValues values
             |> Maybe.withDefault []
 
 
 
+-------------------------------------------------------------------------------
 -- DECODER
+-------------------------------------------------------------------------------
 
 
 queryDecoder : Decoder Query
@@ -508,7 +536,9 @@ valueDecoder =
 
 
 
+-------------------------------------------------------------------------------
 -- ENCODE
+-------------------------------------------------------------------------------
 
 
 encodeQuery : Query -> Encode.Value
@@ -552,11 +582,50 @@ encodeValue value =
 
 
 
+-------------------------------------------------------------------------------
 -- UTILS
+-------------------------------------------------------------------------------
 
 
 boolToString =
     Encode.bool >> Encode.encode 0
+
+
+{-| @priv
+Decode one symbol in a string
+
+    decodeSymbol ">" "hello%3Eworld"
+
+    ==
+
+    "hello>world"
+-}
+decodeSymbol : String -> String -> String
+decodeSymbol symbol =
+    let
+        encoded =
+            Http.encodeUri symbol
+    in
+        Regex.replace Regex.All (Regex.regex encoded) (\_ -> symbol)
+
+
+{-|
+
+    encodeUri encodes = and &
+    We want those as normal chars
+-}
+percentageEncode : Bool -> String -> String
+percentageEncode encodeBrackets =
+    let
+        maybeDecodeBrackets =
+            if encodeBrackets then
+                identity
+            else
+                decodeSymbol "["
+                    >> decodeSymbol "]"
+    in
+        Http.encodeUri
+            >> maybeDecodeBrackets
 
 
 numberToString =

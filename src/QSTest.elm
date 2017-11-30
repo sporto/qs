@@ -21,7 +21,8 @@ parseTests : Test
 parseTests =
     let
         inputs =
-            [ ( "one string"
+            [ -- Strings
+              ( "one string"
               , config
               , "?a=x"
               , Dict.fromList [ ( "a", One <| Text "x" ) ]
@@ -31,23 +32,10 @@ parseTests =
               , "?a=y&b=z"
               , Dict.fromList [ ( "a", One <| Text "y" ), ( "b", One <| Text "z" ) ]
               )
-            , ( "missing ?"
-              , config
-              , "a=z&b=2"
-              , Dict.fromList [ ( "a", One <| Text "z" ), ( "b", One <| Number 2 ) ]
-              )
             , ( "a list of strings"
               , config
               , "?a%5B%5D=y&a%5B%5D=z"
               , Dict.fromList [ ( "a", Many [ Text "y", Text "z" ] ) ]
-              )
-            , ( "mixed"
-              , config
-              , "?a%5B%5D=1&a%5B%5D=2&b=3"
-              , Dict.fromList
-                    [ ( "a", Many [ Number 1, Number 2 ] )
-                    , ( "b", One <| Number 3 )
-                    ]
               )
 
             -- Booleans
@@ -81,13 +69,6 @@ parseTests =
                     [ ( "a", Many [ Text "true", Text "false" ] )
                     ]
               )
-            , ( "list of mixed booleans and strings"
-              , config
-              , "?a[]=true&a[]=falso"
-              , Dict.fromList
-                    [ ( "a", Many [ Boolean True, Text "falso" ] )
-                    ]
-              )
 
             -- Numbers
             , ( "parse a number"
@@ -97,8 +78,37 @@ parseTests =
                     [ ( "a", One <| Number 1 )
                     ]
               )
+            , ( "parse number as string"
+              , config |> parseNumbers False
+              , "?a=1"
+              , Dict.fromList
+                    [ ( "a", One <| Text "1" )
+                    ]
+              )
+
+            -- Mixed
+            , ( "mixed"
+              , config
+              , "?a%5B%5D=1&a%5B%5D=2&b=3"
+              , Dict.fromList
+                    [ ( "a", Many [ Number 1, Number 2 ] )
+                    , ( "b", One <| Number 3 )
+                    ]
+              )
+            , ( "list of mixed booleans and strings"
+              , config
+              , "?a[]=true&a[]=falso"
+              , Dict.fromList
+                    [ ( "a", Many [ Boolean True, Text "falso" ] )
+                    ]
+              )
 
             -- Incomplete
+            , ( "missing ?"
+              , config
+              , "a=z&b=2"
+              , Dict.fromList [ ( "a", One <| Text "z" ), ( "b", One <| Number 2 ) ]
+              )
             , ( "rubish"
               , config
               , "33monkey*^222"
