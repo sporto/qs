@@ -54,7 +54,8 @@ module QS
 
 @docs empty
 @docs get, getAsStringList
-@docs set, setOne, setList, setStr, setBool, setNum, setListStr, setListBool, setListNum
+@docs set, setOne, setStr, setBool, setNum
+@docs setList, setListStr, setListBool, setListNum
 @docs push, pushBool, pushNum, pushStr
 @docs merge, remove
 -}
