@@ -12,6 +12,19 @@ module QS
         , encodeBrackets
         , decoder
         , encode
+        , empty
+        , merge
+        , remove
+        , set
+        , setOne
+        , setList
+        , setStr
+        , setBool
+        , setNum
+        , setListStr
+        , setListBool
+        , setListNum
+        , get
         )
 
 {-| Parse an manipulate query strings
@@ -33,6 +46,10 @@ module QS
 @docs decoder, encode
 
 # Transform
+
+@docs empty, merge, remove,
+@docs set, setOne, setList, setStr, setBool, setNum, setListStr, setListBool, setListNum
+@docs get
 -}
 
 import Dict
@@ -228,11 +245,11 @@ parse (Config config) queryString =
                 |> String.join ""
     in
         if String.isEmpty trimmed then
-            emptyQuery
+            empty
         else
             trimmed
                 |> String.split "&"
-                |> List.foldl (addSegmentToQuery config) emptyQuery
+                |> List.foldl (addSegmentToQuery config) empty
 
 
 {-| @priv
@@ -260,7 +277,7 @@ addListValToQuery : ConfigPriv -> String -> String -> Query -> Query
 addListValToQuery config key rawValue query =
     let
         currentVals =
-            getQueryValues key query
+            get key query
 
         add value =
             case currentVals of
@@ -278,7 +295,7 @@ addListValToQuery config key rawValue query =
                 query
 
             Just value ->
-                setQuery key (add value) query
+                set key (add value) query
 
 
 {-| @priv
@@ -290,7 +307,7 @@ addUniqueValToQuery config key val query =
             query
 
         Just value ->
-            setQuery key (One value) query
+            set key (One value) query
 
 
 {-| @priv
@@ -459,38 +476,157 @@ serialize (Config config) query =
 -------------------------------------------------------------------------------
 
 
-emptyQuery : Query
-emptyQuery =
+{-|
+Get an empty QS.Query
+-}
+empty : Query
+empty =
     Dict.empty
 
 
-{-| First takes preference
+{-|
+Merge to Query
+Values in the first override the second
 -}
-mergeQuery : Query -> Query -> Query
-mergeQuery =
+merge : Query -> Query -> Query
+merge =
     Dict.union
 
 
-removeQuery : String -> Query -> Query
-removeQuery key query =
+{-|
+Remove a key from the query
+-}
+remove : String -> Query -> Query
+remove key query =
     Dict.remove key query
 
 
-setQuery : String -> OneOrMany -> Query -> Query
-setQuery key value query =
+{-|
+Set a value in the query
+
+    QS.set "a" (One <| Text "1") query
+-}
+set : String -> OneOrMany -> Query -> Query
+set key value query =
     Dict.insert key value query
 
 
-getQueryValues : String -> Query -> Maybe OneOrMany
-getQueryValues key query =
+{-|
+Set a unique value in the query
+
+    QS.setOne "a" (Text "1") query
+-}
+setOne : String -> Primitive -> Query -> Query
+setOne key value query =
+    Dict.insert key (One value) query
+
+
+{-|
+Set a list of values in the query
+
+    QS.setList "a" [Text "1", Boolean True] query
+-}
+setList : String -> List Primitive -> Query -> Query
+setList key value query =
+    Dict.insert key (Many value) query
+
+
+{-|
+Set a string value in the query
+
+    QS.setStr "a" "1" Qs.empty
+
+    ==
+
+    Dict.fromList [ ("a", One <| Text "1") ]
+-}
+setStr : String -> String -> Query -> Query
+setStr key value query =
+    setOne key (Text value) query
+
+
+{-|
+Set a boolean value in the query
+
+    QS.setBool "a" True Qs.empty
+
+    ==
+
+    Dict.fromList [ ("a", One <| Boolean True) ]
+-}
+setBool : String -> Bool -> Query -> Query
+setBool key value query =
+    setOne key (Boolean value) query
+
+
+{-|
+Set a numeric value in the query
+
+    QS.setBool "a" 2 Qs.empty
+
+    ==
+
+    Dict.fromList [ ("a", One <| Number 2) ]
+-}
+setNum : String -> Float -> Query -> Query
+setNum key value query =
+    setOne key (Number value) query
+
+
+{-|
+Set a list of string values in the query
+
+    QS.setListStr "a" ["1", "x"] Qs.empty
+
+    ==
+
+    Dict.fromList [ ("a", Many [ Text "1", Text "x" ] ]
+-}
+setListStr : String -> List String -> Query -> Query
+setListStr key values query =
+    setList key (values |> List.map Text) query
+
+
+{-|
+Set a list of boolean values in the query
+
+    QS.setListBool "a" [True, False] Qs.empty
+-}
+setListBool : String -> List Bool -> Query -> Query
+setListBool key values query =
+    setList key (values |> List.map Boolean) query
+
+
+{-|
+Set a list of numeric values in the query
+
+    QS.setListNum "a" [2, 3] Qs.empty
+
+-}
+setListNum : String -> List Float -> Query -> Query
+setListNum key values query =
+    setList key (values |> List.map Number) query
+
+
+{-|
+Get a value from the query
+
+    QS.get "a" query
+
+    ==
+
+    Maybe (One <| Text "1")
+-}
+get : String -> Query -> Maybe OneOrMany
+get key query =
     Dict.get key query
 
 
-getQueryValuesAsStringList : String -> Query -> List String
-getQueryValuesAsStringList key query =
+getAsStringList : String -> Query -> List String
+getAsStringList key query =
     let
         values =
-            getQueryValues key query
+            get key query
 
         makeStringValues queryVal =
             case queryVal of
