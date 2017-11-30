@@ -10,6 +10,7 @@ module QS
         , parseBooleans
         , parseNumbers
         , encodeBrackets
+        , decoder
         )
 
 {-| Parse an manipulate query strings
@@ -27,6 +28,8 @@ module QS
 @docs Config, config, parseBooleans, parseNumbers, encodeBrackets
 
 # Decode
+
+@docs decoder
 
 # Endoce
 
@@ -512,16 +515,16 @@ getQueryValuesAsStringList key query =
 -------------------------------------------------------------------------------
 
 
-queryDecoder : Decoder Query
-queryDecoder =
+decoder : Decoder Query
+decoder =
     Decode.dict queryValueDecoder
 
 
 queryValueDecoder : Decoder OneOrMany
 queryValueDecoder =
     Decode.oneOf
-        [ Decode.map One valueDecoder
-        , Decode.map Many (Decode.list valueDecoder)
+        [ Decode.map Many (Decode.list valueDecoder)
+        , Decode.map One valueDecoder
         ]
 
 

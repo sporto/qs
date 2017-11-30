@@ -192,9 +192,41 @@ serializeTests =
             |> describe "serialize"
 
 
+decoderTest ( testCase, input, expected ) =
+    test testCase <|
+        \() ->
+            Expect.equal expected (Decode.decodeString decoder input)
+
+
+decoderTests =
+    let
+        inputs =
+            [ ( "It decodes text"
+              , """{"a":"x"}"""
+              , Ok <| Dict.fromList [ ( "a", One <| Text "x" ) ]
+              )
+            , ( "It decodes number"
+              , """{"a":1}"""
+              , Ok <| Dict.fromList [ ( "a", One <| Number 1 ) ]
+              )
+            , ( "It decodes boolean"
+              , """{"a":true}"""
+              , Ok <| Dict.fromList [ ( "a", One <| Boolean True ) ]
+              )
+            , ( "It decodes a list"
+              , """{"a":["x", 1, true]}"""
+              , Ok <| Dict.fromList [ ( "a", Many [ Text "x", Number 1, Boolean True ] ) ]
+              )
+            ]
+    in
+        List.map decoderTest inputs
+            |> describe "decoder"
+
+
 all : Test
 all =
     describe "QS"
         [ parseTests
         , serializeTests
+        , decoderTests
         ]
