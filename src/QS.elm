@@ -13,8 +13,8 @@ module QS
         , decoder
         , encode
         , empty
-        , merge
-        , remove
+        , get
+        , getAsStringList
         , set
         , setOne
         , setList
@@ -24,7 +24,12 @@ module QS
         , setListStr
         , setListBool
         , setListNum
-        , get
+        , add
+        , addStr
+        , addBool
+        , addNum
+        , merge
+        , remove
         )
 
 {-| Parse an manipulate query strings
@@ -47,9 +52,11 @@ module QS
 
 # Transform
 
-@docs empty, merge, remove,
+@docs empty
+@docs get, getAsStringList
 @docs set, setOne, setList, setStr, setBool, setNum, setListStr, setListBool, setListNum
-@docs get
+@docs add, addStr, addBool, addNum
+@docs merge, remove
 -}
 
 import Dict
@@ -485,20 +492,56 @@ empty =
 
 
 {-|
+Get a value from the query
+
+    QS.get "a" query
+
+    ==
+
+    Maybe (One <| Text "1")
+-}
+get : String -> Query -> Maybe OneOrMany
+get key query =
+    Dict.get key query
+
+
+{-|
+Get values from the query as a list of strings (regardless if one or many)
+
+    query =
+        Dict.fromList [ ("a", Many [Boolean True, Number 1]) ]
+
+    QS.getAsStringList "a" query
+
+    ==
+
+    ["true", "1"]
+-}
+getAsStringList : String -> Query -> List String
+getAsStringList key query =
+    let
+        values =
+            get key query
+
+        makeStringValues queryVal =
+            case queryVal of
+                One val ->
+                    [ primitiveToString val ]
+
+                Many list ->
+                    List.map primitiveToString list
+    in
+        Maybe.map makeStringValues values
+            |> Maybe.withDefault []
+
+
+{-|
 Merge to Query
 Values in the first override the second
 -}
 merge : Query -> Query -> Query
 merge =
     Dict.union
-
-
-{-|
-Remove a key from the query
--}
-remove : String -> Query -> Query
-remove key query =
-    Dict.remove key query
 
 
 {-|
@@ -609,35 +652,60 @@ setListNum key values query =
 
 
 {-|
-Get a value from the query
+Adds one value to a list
 
-    QS.get "a" query
+    QS.add "a" (Number 2) Qs.empty
 
-    ==
-
-    Maybe (One <| Text "1")
+- If the key is not a list then it will be promoted to a list
+- If the key doesn't exist then it will be added a list of one item
 -}
-get : String -> Query -> Maybe OneOrMany
-get key query =
-    Dict.get key query
-
-
-getAsStringList : String -> Query -> List String
-getAsStringList key query =
+add : String -> Primitive -> Query -> Query
+add key value query =
     let
-        values =
-            get key query
+        newValues =
+            case get key query of
+                Just (One existing) ->
+                    [ existing, value ]
 
-        makeStringValues queryVal =
-            case queryVal of
-                One val ->
-                    [ primitiveToString val ]
+                Just (Many existing) ->
+                    List.append existing [ value ]
 
-                Many list ->
-                    List.map primitiveToString list
+                Nothing ->
+                    [ value ]
     in
-        Maybe.map makeStringValues values
-            |> Maybe.withDefault []
+        setList key newValues query
+
+
+{-|
+Add one string to a list
+-}
+addStr : String -> String -> Query -> Query
+addStr key value query =
+    add key (Text value) query
+
+
+{-|
+Add one boolean to a list
+-}
+addBool : String -> Bool -> Query -> Query
+addBool key value query =
+    add key (Boolean value) query
+
+
+{-|
+Add one number to a list
+-}
+addNum : String -> Float -> Query -> Query
+addNum key value query =
+    add key (Number value) query
+
+
+{-|
+Remove a key from the query
+-}
+remove : String -> Query -> Query
+remove key query =
+    Dict.remove key query
 
 
 
