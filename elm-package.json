@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
     "summary": "Parse and serialize query strings",
-    "repository": "https://github.com/sporto/qs",
+    "repository": "https://github.com/sporto/qs.git",
     "license": "MIT",
     "source-directories": [
         "src"
