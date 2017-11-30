@@ -18,16 +18,16 @@ module QS
         , set
         , setOne
         , setList
-        , setStr
         , setBool
         , setNum
-        , setListStr
+        , setStr
         , setListBool
         , setListNum
-        , add
-        , addStr
-        , addBool
-        , addNum
+        , setListStr
+        , push
+        , pushBool
+        , pushNum
+        , pushStr
         , merge
         , remove
         )
@@ -55,7 +55,7 @@ module QS
 @docs empty
 @docs get, getAsStringList
 @docs set, setOne, setList, setStr, setBool, setNum, setListStr, setListBool, setListNum
-@docs add, addStr, addBool, addNum
+@docs push, pushBool, pushNum, pushStr
 @docs merge, remove
 -}
 
@@ -223,7 +223,7 @@ parseNumbers val (Config config) =
 
 {-|
 Parse a query string.
-This losely follows https://github.com/ljharb/qs parsing
+This loosely follows https://github.com/ljharb/qs
 
     QS.parse
         QS.config
@@ -294,7 +294,7 @@ addListValToQuery config key rawValue query =
         currentVals =
             get key query
 
-        add value =
+        push value =
             case currentVals of
                 Just (Many vals) ->
                     Many (List.append vals [ value ])
@@ -310,7 +310,7 @@ addListValToQuery config key rawValue query =
                 query
 
             Just value ->
-                set key (add value) query
+                set key (push value) query
 
 
 {-| @priv
@@ -407,9 +407,8 @@ querySegmentToTuple element =
 -------------------------------------------------------------------------------
 
 
-{-|
-Serialize the query
-This follows https://github.com/ljharb/qs serialization
+{-| Serialize the query.
+This follows https://github.com/ljharb/qs serialization.
 
     QS.serialize Qs.config <| Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
 
@@ -417,15 +416,15 @@ This follows https://github.com/ljharb/qs serialization
 
     "?a=1&b=2"
 
-List are serialized by adding []
+List are serialized by adding `[]`
 
     QS.serialize Qs.config <| Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
 
     ==
 
-    "?a%5B%5D=1&a%5B%5D=2" ("?a[]=1&a[]=2")
+    "?a%5B%5D=1&a%5B%5D=2" (equivalent to "?a[]=1&a[]=2")
 
-If your don't want to encode [] use `encodeBrackets False`.
+If your don't want to encode `[]` use `encodeBrackets False`.
 
     QS.serialize
         (Qs.config |> encodeBrackets False) ...
@@ -543,9 +542,8 @@ getAsStringList key query =
             |> Maybe.withDefault []
 
 
-{-|
-Merge to Query
-Values in the first override the second
+{-| Merge two Querys.
+Values in the first override values in the second.
 -}
 merge : Query -> Query -> Query
 merge =
@@ -662,13 +660,13 @@ setListNum key values query =
 {-|
 Adds one value to a list
 
-    QS.add "a" (Number 2) Qs.empty
+    QS.push "a" (Number 2) Qs.empty
 
 - If the key is not a list then it will be promoted to a list
 - If the key doesn't exist then it will be added a list of one item
 -}
-add : String -> Primitive -> Query -> Query
-add key value query =
+push : String -> Primitive -> Query -> Query
+push key value query =
     let
         newValues =
             case get key query of
@@ -687,25 +685,25 @@ add key value query =
 {-|
 Add one string to a list
 -}
-addStr : String -> String -> Query -> Query
-addStr key value query =
-    add key (Str value) query
+pushStr : String -> String -> Query -> Query
+pushStr key value query =
+    push key (Str value) query
 
 
 {-|
 Add one boolean to a list
 -}
-addBool : String -> Bool -> Query -> Query
-addBool key value query =
-    add key (Boolean value) query
+pushBool : String -> Bool -> Query -> Query
+pushBool key value query =
+    push key (Boolean value) query
 
 
 {-|
 Add one number to a list
 -}
-addNum : String -> Float -> Query -> Query
-addNum key value query =
-    add key (Number value) query
+pushNum : String -> Float -> Query -> Query
+pushNum key value query =
+    push key (Number value) query
 
 
 {-|
