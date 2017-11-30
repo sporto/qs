@@ -16,18 +16,62 @@ E.g.
 
 Convert a query string to a QS.Query
 
-## Query to string
+```
+QS.parse
+    QS.config
+    "?a=1&b=x"
+
+== Dict.fromList
+    [ ( "a", One <| Number 1 )
+    , ( "b", One <| Str "x" ) 
+    ]
+```
+
+## Serialize
 
 Convert a QS.Query to a query string
+
+```
+query =
+    Dict.fromList
+        [ ( "a", QueryString "1" )
+        , ( "b", QueryString "2" ) 
+        ]
+
+QS.serialize
+    Qs.config 
+    query
+
+==
+
+"?a=1&b=2"
+```
 
 ## Decode query
 
 Convert JSON to a QS.Query
 
+```
+json =
+        """{"a":["x", 1, true]}"""
+
+Decode.decodeString QS.decoder json
+```
+
 ## Encode query
 
 Convert a QS.Query to JSON
 
+```
+query =
+    Many [ Str "x", Boolean True ] )
+
+encodedQuery =
+    QS.encode query
+
+Encode.encode 0 encodedQuery
+```
+
 ## Transform a query
 
-There are function for adding, updating, removing keys in the query, see the documentation at ...
+Function for getting, setting, removing keys in the query. See the documentation.
