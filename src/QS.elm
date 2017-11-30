@@ -91,7 +91,6 @@ type Primitive
     = Boolean Bool
     | Number Float
     | Text String
-    | Unrecognised Decode.Value
 
 
 {-| @priv
@@ -107,9 +106,6 @@ primitiveToString value =
 
         Text str ->
             str
-
-        Unrecognised v ->
-            ""
 
 
 
@@ -592,9 +588,6 @@ encodeValue value =
 
         Number num ->
             Encode.float num
-
-        Unrecognised value ->
-            value
 
 
 
