@@ -552,6 +552,20 @@ valueDecoder =
 -------------------------------------------------------------------------------
 
 
+{-| Encode a QS.Query to a JSON value
+
+    query =
+        Many [ Text "x", Boolean True ] )
+
+    encodedQuery =
+        QS.encode query
+
+    Encode.encode 0 encodedQuery
+
+    ==
+
+    """{"a":["x",true]}"""
+-}
 encode : Query -> Encode.Value
 encode query =
     let
@@ -564,6 +578,8 @@ encode query =
             |> Encode.object
 
 
+{-| @priv
+-}
 encodeQueryValue : OneOrMany -> Encode.Value
 encodeQueryValue value =
     case value of
@@ -576,6 +592,8 @@ encodeQueryValue value =
                 |> Encode.list
 
 
+{-| @priv
+-}
 encodeValue : Primitive -> Encode.Value
 encodeValue value =
     case value of
