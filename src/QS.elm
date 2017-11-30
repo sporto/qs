@@ -515,6 +515,20 @@ getQueryValuesAsStringList key query =
 -------------------------------------------------------------------------------
 
 
+{-|
+Decode JSON into a QS.Query
+
+    json =
+        """{"a":["x", 1, true]}"""
+
+    Decode.decodeString QS.decoder json
+
+    ===
+
+    Dict.fromList [ ( "a", Many [ Text "x", Number 1, Boolean True ] ) ]
+
+This decoder doesn't handle nested values. Nested data will fail the decoder.
+-}
 decoder : Decoder Query
 decoder =
     Decode.dict queryValueDecoder
@@ -534,7 +548,6 @@ valueDecoder =
         [ Decode.map Boolean Decode.bool
         , Decode.map Number Decode.float
         , Decode.map Text Decode.string
-        , Decode.map Unrecognised Decode.value
         ]
 
 
