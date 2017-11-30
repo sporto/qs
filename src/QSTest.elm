@@ -25,17 +25,17 @@ parseTests =
               ( "one string"
               , config
               , "?a=x"
-              , Dict.fromList [ ( "a", One <| Text "x" ) ]
+              , Dict.fromList [ ( "a", One <| Str "x" ) ]
               )
             , ( "two strings"
               , config
               , "?a=y&b=z"
-              , Dict.fromList [ ( "a", One <| Text "y" ), ( "b", One <| Text "z" ) ]
+              , Dict.fromList [ ( "a", One <| Str "y" ), ( "b", One <| Str "z" ) ]
               )
             , ( "a list of strings"
               , config
               , "?a%5B%5D=y&a%5B%5D=z"
-              , Dict.fromList [ ( "a", Many [ Text "y", Text "z" ] ) ]
+              , Dict.fromList [ ( "a", Many [ Str "y", Str "z" ] ) ]
               )
 
             -- Booleans
@@ -51,8 +51,8 @@ parseTests =
               , config |> parseBooleans False
               , "?a=true&b=false"
               , Dict.fromList
-                    [ ( "a", One <| Text "true" )
-                    , ( "b", One <| Text "false" )
+                    [ ( "a", One <| Str "true" )
+                    , ( "b", One <| Str "false" )
                     ]
               )
             , ( "list of booleans"
@@ -66,7 +66,7 @@ parseTests =
               , config |> parseBooleans False
               , "?a[]=true&a[]=false"
               , Dict.fromList
-                    [ ( "a", Many [ Text "true", Text "false" ] )
+                    [ ( "a", Many [ Str "true", Str "false" ] )
                     ]
               )
 
@@ -82,7 +82,7 @@ parseTests =
               , config |> parseNumbers False
               , "?a=1"
               , Dict.fromList
-                    [ ( "a", One <| Text "1" )
+                    [ ( "a", One <| Str "1" )
                     ]
               )
 
@@ -99,7 +99,7 @@ parseTests =
               , config
               , "?a[]=true&a[]=falso"
               , Dict.fromList
-                    [ ( "a", Many [ Boolean True, Text "falso" ] )
+                    [ ( "a", Many [ Boolean True, Str "falso" ] )
                     ]
               )
 
@@ -107,7 +107,7 @@ parseTests =
             , ( "missing ?"
               , config
               , "a=z&b=2"
-              , Dict.fromList [ ( "a", One <| Text "z" ), ( "b", One <| Number 2 ) ]
+              , Dict.fromList [ ( "a", One <| Str "z" ), ( "b", One <| Number 2 ) ]
               )
             , ( "rubish"
               , config
@@ -143,27 +143,27 @@ serializeTests =
         inputs =
             [ ( "one string"
               , config
-              , Dict.fromList [ ( "a", One <| Text "x" ) ]
+              , Dict.fromList [ ( "a", One <| Str "x" ) ]
               , "?a=x"
               )
             , ( "two strings"
               , config
-              , Dict.fromList [ ( "a", One <| Text "y" ), ( "b", One <| Text "z" ) ]
+              , Dict.fromList [ ( "a", One <| Str "y" ), ( "b", One <| Str "z" ) ]
               , "?a=y&b=z"
               )
             , ( "list of strings"
               , config
-              , Dict.fromList [ ( "a", Many [ Text "z", Text "y" ] ) ]
+              , Dict.fromList [ ( "a", Many [ Str "z", Str "y" ] ) ]
               , "?a%5B%5D=z&a%5B%5D=y"
               )
             , ( "do not encode brackets"
               , config |> encodeBrackets False
-              , Dict.fromList [ ( "a", Many [ Text "1", Text "2" ] ) ]
+              , Dict.fromList [ ( "a", Many [ Str "1", Str "2" ] ) ]
               , "?a[]=1&a[]=2"
               )
             , ( "brackets in value are always encoded"
               , config |> encodeBrackets False
-              , Dict.fromList [ ( "a", Many [ Text "1[]", Text "2" ] ) ]
+              , Dict.fromList [ ( "a", Many [ Str "1[]", Str "2" ] ) ]
               , "?a[]=1%5B%5D&a[]=2"
               )
             , ( "boolean"
@@ -203,7 +203,7 @@ decoderTests =
         inputs =
             [ ( "It decodes text"
               , """{"a":"x"}"""
-              , Ok <| Dict.fromList [ ( "a", One <| Text "x" ) ]
+              , Ok <| Dict.fromList [ ( "a", One <| Str "x" ) ]
               )
             , ( "It decodes number"
               , """{"a":1}"""
@@ -215,7 +215,7 @@ decoderTests =
               )
             , ( "It decodes a list"
               , """{"a":["x", 1, true]}"""
-              , Ok <| Dict.fromList [ ( "a", Many [ Text "x", Number 1, Boolean True ] ) ]
+              , Ok <| Dict.fromList [ ( "a", Many [ Str "x", Number 1, Boolean True ] ) ]
               )
             ]
     in
@@ -233,11 +233,11 @@ encodeTests =
     let
         inputs =
             [ ( "It encodes one"
-              , Dict.fromList [ ( "a", One <| Text "x" ) ]
+              , Dict.fromList [ ( "a", One <| Str "x" ) ]
               , """{"a":"x"}"""
               )
             , ( "It encodes a list"
-              , Dict.fromList [ ( "a", Many [ Text "x", Number 1, Boolean True ] ) ]
+              , Dict.fromList [ ( "a", Many [ Str "x", Number 1, Boolean True ] ) ]
               , """{"a":["x",1,true]}"""
               )
             ]

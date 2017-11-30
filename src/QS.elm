@@ -77,7 +77,7 @@ A parsed query string
     ==
 
     Dict.fromList
-        [ ( "a", One <| Text "x" )
+        [ ( "a", One <| Str "x" )
         , ( "b", Many [ Number 1, Number 2 ] )
         ]
 -}
@@ -90,9 +90,17 @@ A query value can be a unique value (One) e.g.
 
     a=1
 
+    ==
+
+    One (Number 1)
+
 Or it can be a list (Many) e.g.
 
     a[]=1&a[]=2
+
+    ==
+
+    Many [ Number 1, Number 2 ]
 -}
 type OneOrMany
     = One Primitive
@@ -102,18 +110,18 @@ type OneOrMany
 {-|
 Type for storing query values
 
-    "a=x" == One <| Text "x"
+    "a=x" == One <| Str "x"
 
     "a=1" == One <| Number 1
 
     "a=true" == One <| Boolean True
 
-    "a[]=x&a[]=1&a[]=true" == Many [ Text "x", Number 1, Boolean True ]
+    "a[]=x&a[]=1&a[]=true" == Many [ Str "x", Number 1, Boolean True ]
 -}
 type Primitive
     = Boolean Bool
     | Number Float
-    | Text String
+    | Str String
 
 
 {-| @priv
@@ -127,7 +135,7 @@ primitiveToString value =
         Number num ->
             numberToString num
 
-        Text str ->
+        Str str ->
             str
 
 
@@ -186,7 +194,7 @@ Wherever to parse booleans. If false then "true" and "false" will be strings.
 
     ==
 
-    Dict.fromList [ ("a", One <| Text "true") ]
+    Dict.fromList [ ("a", One <| Str "true") ]
 -}
 parseBooleans : Bool -> Config -> Config
 parseBooleans val (Config config) =
@@ -200,7 +208,7 @@ Wherever to parse numbers. If false then numbers will be strings.
 
     ==
 
-    Dict.fromList [ ("a", One <| Text "1") ]
+    Dict.fromList [ ("a", One <| Str "1") ]
 -}
 parseNumbers : Bool -> Config -> Config
 parseNumbers val (Config config) =
@@ -221,7 +229,7 @@ This losely follows https://github.com/ljharb/qs parsing
         QS.config
         "?a=1&b=x"
 
-    == Dict.fromList [ ( "a", One <| Number 1 ), ( "b", One <| Text "x" ) ]
+    == Dict.fromList [ ( "a", One <| Number 1 ), ( "b", One <| Str "x" ) ]
 
 ## Booleans
 
@@ -355,16 +363,16 @@ rawValueToValue config val =
                     Boolean False |> Just
 
                 _ ->
-                    Text trimmed |> Just
+                    Str trimmed |> Just
         else if isNum && config.parseNumbers then
             case maybeFloat of
                 Just n ->
                     Number n |> Just
 
                 Nothing ->
-                    Text trimmed |> Just
+                    Str trimmed |> Just
         else
-            Text trimmed |> Just
+            Str trimmed |> Just
 
 
 {-| @priv
@@ -498,7 +506,7 @@ Get a value from the query
 
     ==
 
-    Maybe (One <| Text "1")
+    Maybe (One <| Str "1")
 -}
 get : String -> Query -> Maybe OneOrMany
 get key query =
@@ -547,7 +555,7 @@ merge =
 {-|
 Set a value in the query
 
-    QS.set "a" (One <| Text "1") query
+    QS.set "a" (One <| Str "1") query
 -}
 set : String -> OneOrMany -> Query -> Query
 set key value query =
@@ -557,7 +565,7 @@ set key value query =
 {-|
 Set a unique value in the query
 
-    QS.setOne "a" (Text "1") query
+    QS.setOne "a" (Str "1") query
 -}
 setOne : String -> Primitive -> Query -> Query
 setOne key value query =
@@ -567,7 +575,7 @@ setOne key value query =
 {-|
 Set a list of values in the query
 
-    QS.setList "a" [Text "1", Boolean True] query
+    QS.setList "a" [Str "1", Boolean True] query
 -}
 setList : String -> List Primitive -> Query -> Query
 setList key value query =
@@ -581,11 +589,11 @@ Set a string value in the query
 
     ==
 
-    Dict.fromList [ ("a", One <| Text "1") ]
+    Dict.fromList [ ("a", One <| Str "1") ]
 -}
 setStr : String -> String -> Query -> Query
 setStr key value query =
-    setOne key (Text value) query
+    setOne key (Str value) query
 
 
 {-|
@@ -623,11 +631,11 @@ Set a list of string values in the query
 
     ==
 
-    Dict.fromList [ ("a", Many [ Text "1", Text "x" ] ]
+    Dict.fromList [ ("a", Many [ Str "1", Str "x" ] ]
 -}
 setListStr : String -> List String -> Query -> Query
 setListStr key values query =
-    setList key (values |> List.map Text) query
+    setList key (values |> List.map Str) query
 
 
 {-|
@@ -681,7 +689,7 @@ Add one string to a list
 -}
 addStr : String -> String -> Query -> Query
 addStr key value query =
-    add key (Text value) query
+    add key (Str value) query
 
 
 {-|
@@ -724,7 +732,7 @@ Decode JSON into a QS.Query
 
     ===
 
-    Dict.fromList [ ( "a", Many [ Text "x", Number 1, Boolean True ] ) ]
+    Dict.fromList [ ( "a", Many [ Str "x", Number 1, Boolean True ] ) ]
 
 This decoder doesn't handle nested values. Nested data will fail the decoder.
 -}
@@ -746,7 +754,7 @@ valueDecoder =
     Decode.oneOf
         [ Decode.map Boolean Decode.bool
         , Decode.map Number Decode.float
-        , Decode.map Text Decode.string
+        , Decode.map Str Decode.string
         ]
 
 
@@ -759,7 +767,7 @@ valueDecoder =
 {-| Encode a QS.Query to a JSON value
 
     query =
-        Many [ Text "x", Boolean True ] )
+        Many [ Str "x", Boolean True ] )
 
     encodedQuery =
         QS.encode query
@@ -801,7 +809,7 @@ encodeQueryValue value =
 encodeValue : Primitive -> Encode.Value
 encodeValue value =
     case value of
-        Text str ->
+        Str str ->
             Encode.string str
 
         Boolean bool ->
