@@ -46,10 +46,10 @@ module QS exposing
 -}
 
 import Dict
-import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Regex
+import Url
 
 
 
@@ -115,7 +115,7 @@ primitiveToString value =
             boolToString bool
 
         Number num ->
-            numberToString num
+            String.fromFloat num
 
         Str str ->
             str
@@ -166,8 +166,8 @@ config =
 
 -}
 encodeBrackets : Bool -> Config -> Config
-encodeBrackets val (Config config) =
-    Config { config | encodeBrackets = val }
+encodeBrackets val (Config cfg) =
+    Config { cfg | encodeBrackets = val }
 
 
 {-| Wherever to parse booleans. If false then "true" and "false" will be strings.
@@ -177,8 +177,8 @@ encodeBrackets val (Config config) =
 
 -}
 parseBooleans : Bool -> Config -> Config
-parseBooleans val (Config config) =
-    Config { config | parseBooleans = val }
+parseBooleans val (Config cfg) =
+    Config { cfg | parseBooleans = val }
 
 
 {-| Wherever to parse numbers. If false then numbers will be strings.
@@ -188,8 +188,8 @@ parseBooleans val (Config config) =
 
 -}
 parseNumbers : Bool -> Config -> Config
-parseNumbers val (Config config) =
-    Config { config | parseNumbers = val }
+parseNumbers val (Config cfg) =
+    Config { cfg | parseNumbers = val }
 
 
 
@@ -227,7 +227,7 @@ Change this with `parseNumbers False`
 
 -}
 parse : Config -> String -> Query
-parse (Config config) queryString =
+parse (Config cfg) queryString =
     let
         trimmed =
             queryString
@@ -240,14 +240,14 @@ parse (Config config) queryString =
     else
         trimmed
             |> String.split "&"
-            |> List.foldl (addSegmentToQuery config) empty
+            |> List.foldl (addSegmentToQuery cfg) empty
 
 
 {-| @priv
 Add a segment like a=1 to the query
 -}
 addSegmentToQuery : ConfigPriv -> String -> Query -> Query
-addSegmentToQuery config segment query =
+addSegmentToQuery cfg segment query =
     let
         ( key, val ) =
             querySegmentToTuple segment
@@ -257,21 +257,21 @@ addSegmentToQuery config segment query =
             newKey =
                 String.dropRight 2 key
         in
-        addListValToQuery config newKey val query
+        addListValToQuery cfg newKey val query
 
     else
-        addUniqueValToQuery config key val query
+        addUniqueValToQuery cfg key val query
 
 
 {-| @priv
 -}
 addListValToQuery : ConfigPriv -> String -> String -> Query -> Query
-addListValToQuery config key rawValue query =
+addListValToQuery cfg key rawValue query =
     let
         currentVals =
             get key query
 
-        push value =
+        pushValue value =
             case currentVals of
                 Just (Many vals) ->
                     Many (List.append vals [ value ])
@@ -282,19 +282,19 @@ addListValToQuery config key rawValue query =
                 Nothing ->
                     Many [ value ]
     in
-    case rawValueToValue config rawValue of
+    case rawValueToValue cfg rawValue of
         Nothing ->
             query
 
         Just value ->
-            set key (push value) query
+            set key (pushValue value) query
 
 
 {-| @priv
 -}
 addUniqueValToQuery : ConfigPriv -> String -> String -> Query -> Query
-addUniqueValToQuery config key val query =
-    case rawValueToValue config val of
+addUniqueValToQuery cfg key val query =
+    case rawValueToValue cfg val of
         Nothing ->
             query
 
@@ -305,7 +305,7 @@ addUniqueValToQuery config key val query =
 {-| @priv
 -}
 rawValueToValue : ConfigPriv -> String -> Maybe Primitive
-rawValueToValue config val =
+rawValueToValue cfg val =
     let
         trimmed =
             String.trim val
@@ -324,7 +324,6 @@ rawValueToValue config val =
 
         maybeFloat =
             String.toFloat trimmed
-                |> Result.toMaybe
 
         isNum =
             maybeFloat /= Nothing
@@ -332,7 +331,7 @@ rawValueToValue config val =
     if isEmpty then
         Nothing
 
-    else if isBool && config.parseBooleans then
+    else if isBool && cfg.parseBooleans then
         case trimmed of
             "true" ->
                 Boolean True |> Just
@@ -343,7 +342,7 @@ rawValueToValue config val =
             _ ->
                 Str trimmed |> Just
 
-    else if isNum && config.parseNumbers then
+    else if isNum && cfg.parseNumbers then
         case maybeFloat of
             Just n ->
                 Number n |> Just
@@ -371,13 +370,13 @@ querySegmentToTuple element =
             Maybe.withDefault "" (List.head splitted)
 
         firstDecoded =
-            Http.decodeUri first |> Maybe.withDefault ""
+            Url.percentDecode first |> Maybe.withDefault ""
 
         second =
             Maybe.withDefault "" (List.head (List.drop 1 splitted))
 
         secondDecoded =
-            Http.decodeUri second |> Maybe.withDefault ""
+            Url.percentDecode second |> Maybe.withDefault ""
     in
     ( firstDecoded, secondDecoded )
 
@@ -414,7 +413,7 @@ However brackets in the value are always encoded.
 
 -}
 serialize : Config -> Query -> String
-serialize (Config config) query =
+serialize (Config cfg) query =
     if Dict.isEmpty query then
         ""
 
@@ -424,7 +423,7 @@ serialize (Config config) query =
             addUniqueKey acc key value =
                 let
                     encodedKey =
-                        percentageEncode config.encodeBrackets key
+                        percentageEncode cfg.encodeBrackets key
 
                     encodedVal =
                         percentageEncode True value
@@ -435,7 +434,7 @@ serialize (Config config) query =
             addListKey acc key values =
                 let
                     encodedKey =
-                        percentageEncode config.encodeBrackets (key ++ "[]")
+                        percentageEncode cfg.encodeBrackets (key ++ "[]")
 
                     encodeVal v =
                         percentageEncode True v
@@ -454,13 +453,13 @@ serialize (Config config) query =
                             |> List.map primitiveToString
                             |> addListKey acc key
 
-            values =
+            processedValues =
                 query
                     |> Dict.toList
                     |> List.foldl addKey []
                     |> String.join "&"
         in
-        "?" ++ values
+        "?" ++ processedValues
 
 
 
@@ -755,13 +754,12 @@ encode query =
 encodeQueryValue : OneOrMany -> Encode.Value
 encodeQueryValue value =
     case value of
-        One value ->
-            encodeValue value
+        One val ->
+            encodeValue val
 
         Many list ->
             list
-                |> List.map encodeValue
-                |> Encode.list
+                |> Encode.list encodeValue
 
 
 {-| @priv
@@ -799,10 +797,12 @@ Decode one symbol in a string
 decodeSymbol : String -> String -> String
 decodeSymbol symbol =
     let
-        encoded =
-            Http.encodeUri symbol
+        regex =
+            Url.percentEncode symbol
+                |> Regex.fromString
+                |> Maybe.withDefault Regex.never
     in
-    Regex.replace Regex.All (Regex.regex encoded) (\_ -> symbol)
+    Regex.replace regex (\_ -> symbol)
 
 
 {-|
@@ -812,19 +812,15 @@ decodeSymbol symbol =
 
 -}
 percentageEncode : Bool -> String -> String
-percentageEncode encodeBrackets =
+percentageEncode shouldEncodeBrackets =
     let
         maybeDecodeBrackets =
-            if encodeBrackets then
+            if shouldEncodeBrackets then
                 identity
 
             else
                 decodeSymbol "["
                     >> decodeSymbol "]"
     in
-    Http.encodeUri
+    Url.percentEncode
         >> maybeDecodeBrackets
-
-
-numberToString =
-    toString
