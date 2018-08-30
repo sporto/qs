@@ -1,54 +1,38 @@
-module QS
-    exposing
-        ( Query
-        , OneOrMany(..)
-        , Primitive(..)
-        , parse
-        , serialize
-        , Config
-        , config
-        , parseBooleans
-        , parseNumbers
-        , encodeBrackets
-        , decoder
-        , encode
-        , empty
-        , get
-        , getAsStringList
-        , set
-        , setOne
-        , setList
-        , setBool
-        , setNum
-        , setStr
-        , setListBool
-        , setListNum
-        , setListStr
-        , push
-        , pushBool
-        , pushNum
-        , pushStr
-        , merge
-        , remove
-        )
+module QS exposing
+    ( Query, OneOrMany(..), Primitive(..)
+    , parse, serialize
+    , Config, config, parseBooleans, parseNumbers, encodeBrackets
+    , decoder, encode
+    , empty
+    , get, getAsStringList
+    , set, setOne, setStr, setBool, setNum
+    , setList, setListStr, setListBool, setListNum
+    , push, pushBool, pushNum, pushStr
+    , merge, remove
+    )
 
 {-| Parse an manipulate query strings
+
 
 # Types
 
 @docs Query, OneOrMany, Primitive
 
+
 # Parse and Serialize
 
 @docs parse, serialize
+
 
 # Config
 
 @docs Config, config, parseBooleans, parseNumbers, encodeBrackets
 
+
 # Decode and Encode
 
 @docs decoder, encode
+
 
 # Transform
 
@@ -58,6 +42,7 @@ module QS
 @docs setList, setListStr, setListBool, setListNum
 @docs push, pushBool, pushNum, pushStr
 @docs merge, remove
+
 -}
 
 import Dict
@@ -67,33 +52,28 @@ import Json.Encode as Encode
 import Regex
 
 
+
 -- QUERY
 
 
-{-|
-A parsed query string
+{-| A parsed query string
 
     "?a=x&b[]=1&b=2"
+        == Dict.fromList
+            [ ( "a", One <| Str "x" )
+            , ( "b", Many [ Number 1, Number 2 ] )
+            ]
 
-    ==
-
-    Dict.fromList
-        [ ( "a", One <| Str "x" )
-        , ( "b", Many [ Number 1, Number 2 ] )
-        ]
 -}
 type alias Query =
     Dict.Dict String OneOrMany
 
 
-{-|
-A query value can be a unique value (One) e.g.
+{-| A query value can be a unique value (One) e.g.
 
-    a=1
-
-    ==
-
-    One (Number 1)
+    a =
+        1
+            == One (Number 1)
 
 Or it can be a list (Many) e.g.
 
@@ -102,14 +82,14 @@ Or it can be a list (Many) e.g.
     ==
 
     Many [ Number 1, Number 2 ]
+
 -}
 type OneOrMany
     = One Primitive
     | Many (List Primitive)
 
 
-{-|
-Type for storing query values
+{-| Type for storing query values
 
     "a=x" == One <| Str "x"
 
@@ -118,6 +98,7 @@ Type for storing query values
     "a=true" == One <| Boolean True
 
     "a[]=x&a[]=1&a[]=true" == Many [ Str "x", Number 1, Boolean True ]
+
 -}
 type Primitive
     = Boolean Bool
@@ -151,19 +132,23 @@ type alias ConfigPriv =
     }
 
 
-{-|
-Opaque configuration type
+{-| Opaque configuration type
 -}
 type Config
     = Config ConfigPriv
 
 
-{-|
-Get a default configuration
+{-| Get a default configuration
 
-    encodeBrackets = True
-    parseBooleans = True
-    parseNumbers = True
+    encodeBrackets =
+        True
+
+    parseBooleans =
+        True
+
+    parseNumbers =
+        True
+
 -}
 config : Config
 config =
@@ -174,42 +159,33 @@ config =
         }
 
 
-{-|
-Wherever to encode brackets or not
+{-| Wherever to encode brackets or not
 
     QS.serialize (Qs.config |> Qs.encodeBrackets False) query
+        == "a[]=1&a[]=2"
 
-    ==
-
-    "a[]=1&a[]=2"
 -}
 encodeBrackets : Bool -> Config -> Config
 encodeBrackets val (Config config) =
     Config { config | encodeBrackets = val }
 
 
-{-|
-Wherever to parse booleans. If false then "true" and "false" will be strings.
+{-| Wherever to parse booleans. If false then "true" and "false" will be strings.
 
     QS.parse (Qs.config |> Qs.parseBooleans False) "?a=true"
+        == Dict.fromList [ ( "a", One <| Str "true" ) ]
 
-    ==
-
-    Dict.fromList [ ("a", One <| Str "true") ]
 -}
 parseBooleans : Bool -> Config -> Config
 parseBooleans val (Config config) =
     Config { config | parseBooleans = val }
 
 
-{-|
-Wherever to parse numbers. If false then numbers will be strings.
+{-| Wherever to parse numbers. If false then numbers will be strings.
 
     QS.parse (Qs.config |> Qs.parseNumbers False) "?a=1"
+        == Dict.fromList [ ( "a", One <| Str "1" ) ]
 
-    ==
-
-    Dict.fromList [ ("a", One <| Str "1") ]
 -}
 parseNumbers : Bool -> Config -> Config
 parseNumbers val (Config config) =
@@ -222,15 +198,14 @@ parseNumbers val (Config config) =
 -------------------------------------------------------------------------------
 
 
-{-|
-Parse a query string.
-This loosely follows https://github.com/ljharb/qs
+{-| Parse a query string.
+This loosely follows <https://github.com/ljharb/qs>
 
     QS.parse
         QS.config
         "?a=1&b=x"
+        == Dict.fromList [ ( "a", One <| Number 1 ), ( "b", One <| Str "x" ) ]
 
-    == Dict.fromList [ ( "a", One <| Number 1 ), ( "b", One <| Str "x" ) ]
 
 ## Booleans
 
@@ -240,17 +215,16 @@ By default QS will parse "true" and "false" into booleans. You can change this w
         (QS.config |> QS.parseBooleans False)
         "?a=false"
 
+
 ## Numbers
 
 The same applies for numbers, by default QS will try to parse numbers
 
     QS.parse QS.config "?a=1"
-
-    ==
-
-    Dict.fromList [ ( "a", One <| Number 1 ) ]
+        == Dict.fromList [ ( "a", One <| Number 1 ) ]
 
 Change this with `parseNumbers False`
+
 -}
 parse : Config -> String -> Query
 parse (Config config) queryString =
@@ -260,12 +234,13 @@ parse (Config config) queryString =
                 |> String.split "?"
                 |> String.join ""
     in
-        if String.isEmpty trimmed then
-            empty
-        else
-            trimmed
-                |> String.split "&"
-                |> List.foldl (addSegmentToQuery config) empty
+    if String.isEmpty trimmed then
+        empty
+
+    else
+        trimmed
+            |> String.split "&"
+            |> List.foldl (addSegmentToQuery config) empty
 
 
 {-| @priv
@@ -277,14 +252,15 @@ addSegmentToQuery config segment query =
         ( key, val ) =
             querySegmentToTuple segment
     in
-        if String.endsWith "[]" key then
-            let
-                newKey =
-                    String.dropRight 2 key
-            in
-                addListValToQuery config newKey val query
-        else
-            addUniqueValToQuery config key val query
+    if String.endsWith "[]" key then
+        let
+            newKey =
+                String.dropRight 2 key
+        in
+        addListValToQuery config newKey val query
+
+    else
+        addUniqueValToQuery config key val query
 
 
 {-| @priv
@@ -306,12 +282,12 @@ addListValToQuery config key rawValue query =
                 Nothing ->
                     Many [ value ]
     in
-        case rawValueToValue config rawValue of
-            Nothing ->
-                query
+    case rawValueToValue config rawValue of
+        Nothing ->
+            query
 
-            Just value ->
-                set key (push value) query
+        Just value ->
+            set key (push value) query
 
 
 {-| @priv
@@ -353,33 +329,37 @@ rawValueToValue config val =
         isNum =
             maybeFloat /= Nothing
     in
-        if isEmpty then
-            Nothing
-        else if isBool && config.parseBooleans then
-            case trimmed of
-                "true" ->
-                    Boolean True |> Just
+    if isEmpty then
+        Nothing
 
-                "false" ->
-                    Boolean False |> Just
+    else if isBool && config.parseBooleans then
+        case trimmed of
+            "true" ->
+                Boolean True |> Just
 
-                _ ->
-                    Str trimmed |> Just
-        else if isNum && config.parseNumbers then
-            case maybeFloat of
-                Just n ->
-                    Number n |> Just
+            "false" ->
+                Boolean False |> Just
 
-                Nothing ->
-                    Str trimmed |> Just
-        else
-            Str trimmed |> Just
+            _ ->
+                Str trimmed |> Just
+
+    else if isNum && config.parseNumbers then
+        case maybeFloat of
+            Just n ->
+                Number n |> Just
+
+            Nothing ->
+                Str trimmed |> Just
+
+    else
+        Str trimmed |> Just
 
 
 {-| @priv
 Split a segment into a tuple
 
-    "a=1" ==> ("a", "1")
+    "a=1" ==> ( "a", "1" )
+
 -}
 querySegmentToTuple : String -> ( String, String )
 querySegmentToTuple element =
@@ -399,7 +379,7 @@ querySegmentToTuple element =
         secondDecoded =
             Http.decodeUri second |> Maybe.withDefault ""
     in
-        ( firstDecoded, secondDecoded )
+    ( firstDecoded, secondDecoded )
 
 
 
@@ -409,21 +389,17 @@ querySegmentToTuple element =
 
 
 {-| Serialize the query.
-This follows https://github.com/ljharb/qs serialization.
+This follows <https://github.com/ljharb/qs> serialization.
 
-    QS.serialize Qs.config <| Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
-
-    ==
-
-    "?a=1&b=2"
+    QS.serialize Qs.config <|
+        Dict.fromList [ ( "a", QueryString "1" ), ( "b", QueryString "2" ) ]
+            == "?a=1&b=2"
 
 List are serialized by adding `[]`
 
-    QS.serialize Qs.config <| Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
-
-    ==
-
-    "?a%5B%5D=1&a%5B%5D=2" (equivalent to "?a[]=1&a[]=2")
+    QS.serialize Qs.config <|
+        Dict.fromList [ ( "a", QueryStringList [ "1", "2" ] ) ]
+            == "?a%5B%5D=1&a%5B%5D=2" (equivalent to "?a[]=1&a[]=2")
 
 If your don't want to encode `[]` use `encodeBrackets False`.
 
@@ -435,11 +411,13 @@ If your don't want to encode `[]` use `encodeBrackets False`.
     "?a[]=1&a[]=2"
 
 However brackets in the value are always encoded.
+
 -}
 serialize : Config -> Query -> String
 serialize (Config config) query =
     if Dict.isEmpty query then
         ""
+
     else
         let
             addUniqueKey : List String -> String -> String -> List String
@@ -451,7 +429,7 @@ serialize (Config config) query =
                     encodedVal =
                         percentageEncode True value
                 in
-                    acc ++ [ encodedKey ++ "=" ++ encodedVal ]
+                acc ++ [ encodedKey ++ "=" ++ encodedVal ]
 
             addListKey : List String -> String -> List String -> List String
             addListKey acc key values =
@@ -462,9 +440,9 @@ serialize (Config config) query =
                     encodeVal v =
                         percentageEncode True v
                 in
-                    values
-                        |> List.map (\val -> encodedKey ++ "=" ++ encodeVal val)
-                        |> List.append acc
+                values
+                    |> List.map (\val -> encodedKey ++ "=" ++ encodeVal val)
+                    |> List.append acc
 
             addKey ( key, queryVal ) acc =
                 case queryVal of
@@ -482,7 +460,7 @@ serialize (Config config) query =
                     |> List.foldl addKey []
                     |> String.join "&"
         in
-            "?" ++ values
+        "?" ++ values
 
 
 
@@ -491,30 +469,25 @@ serialize (Config config) query =
 -------------------------------------------------------------------------------
 
 
-{-|
-Get an empty QS.Query
+{-| Get an empty QS.Query
 -}
 empty : Query
 empty =
     Dict.empty
 
 
-{-|
-Get a value from the query
+{-| Get a value from the query
 
     QS.get "a" query
+        == Maybe (One <| Str "1")
 
-    ==
-
-    Maybe (One <| Str "1")
 -}
 get : String -> Query -> Maybe OneOrMany
 get key query =
     Dict.get key query
 
 
-{-|
-Get values from the query as a list of strings (regardless if one or many)
+{-| Get values from the query as a list of strings (regardless if one or many)
 
     query =
         Dict.fromList [ ("a", Many [Boolean True, Number 1]) ]
@@ -524,6 +497,7 @@ Get values from the query as a list of strings (regardless if one or many)
     ==
 
     ["true", "1"]
+
 -}
 getAsStringList : String -> Query -> List String
 getAsStringList key query =
@@ -539,8 +513,8 @@ getAsStringList key query =
                 Many list ->
                     List.map primitiveToString list
     in
-        Maybe.map makeStringValues values
-            |> Maybe.withDefault []
+    Maybe.map makeStringValues values
+        |> Maybe.withDefault []
 
 
 {-| Merge two Querys.
@@ -551,106 +525,96 @@ merge =
     Dict.union
 
 
-{-|
-Set a value in the query
+{-| Set a value in the query
 
     QS.set "a" (One <| Str "1") query
+
 -}
 set : String -> OneOrMany -> Query -> Query
 set key value query =
     Dict.insert key value query
 
 
-{-|
-Set a unique value in the query
+{-| Set a unique value in the query
 
     QS.setOne "a" (Str "1") query
+
 -}
 setOne : String -> Primitive -> Query -> Query
 setOne key value query =
     Dict.insert key (One value) query
 
 
-{-|
-Set a list of values in the query
+{-| Set a list of values in the query
 
-    QS.setList "a" [Str "1", Boolean True] query
+    QS.setList "a" [ Str "1", Boolean True ] query
+
 -}
 setList : String -> List Primitive -> Query -> Query
 setList key value query =
     Dict.insert key (Many value) query
 
 
-{-|
-Set a string value in the query
+{-| Set a string value in the query
 
     QS.setStr "a" "1" Qs.empty
+        == Dict.fromList [ ( "a", One <| Str "1" ) ]
 
-    ==
-
-    Dict.fromList [ ("a", One <| Str "1") ]
 -}
 setStr : String -> String -> Query -> Query
 setStr key value query =
     setOne key (Str value) query
 
 
-{-|
-Set a boolean value in the query
+{-| Set a boolean value in the query
 
     QS.setBool "a" True Qs.empty
+        == Dict.fromList [ ( "a", One <| Boolean True ) ]
 
-    ==
-
-    Dict.fromList [ ("a", One <| Boolean True) ]
 -}
 setBool : String -> Bool -> Query -> Query
 setBool key value query =
     setOne key (Boolean value) query
 
 
-{-|
-Set a numeric value in the query
+{-| Set a numeric value in the query
 
     QS.setBool "a" 2 Qs.empty
+        == Dict.fromList [ ( "a", One <| Number 2 ) ]
 
-    ==
-
-    Dict.fromList [ ("a", One <| Number 2) ]
 -}
 setNum : String -> Float -> Query -> Query
 setNum key value query =
     setOne key (Number value) query
 
 
-{-|
-Set a list of string values in the query
+{-| Set a list of string values in the query
 
     QS.setListStr "a" ["1", "x"] Qs.empty
 
     ==
 
     Dict.fromList [ ("a", Many [ Str "1", Str "x" ] ]
+
 -}
 setListStr : String -> List String -> Query -> Query
 setListStr key values query =
     setList key (values |> List.map Str) query
 
 
-{-|
-Set a list of boolean values in the query
+{-| Set a list of boolean values in the query
 
-    QS.setListBool "a" [True, False] Qs.empty
+    QS.setListBool "a" [ True, False ] Qs.empty
+
 -}
 setListBool : String -> List Bool -> Query -> Query
 setListBool key values query =
     setList key (values |> List.map Boolean) query
 
 
-{-|
-Set a list of numeric values in the query
+{-| Set a list of numeric values in the query
 
-    QS.setListNum "a" [2, 3] Qs.empty
+    QS.setListNum "a" [ 2, 3 ] Qs.empty
 
 -}
 setListNum : String -> List Float -> Query -> Query
@@ -658,13 +622,13 @@ setListNum key values query =
     setList key (values |> List.map Number) query
 
 
-{-|
-Adds one value to a list
+{-| Adds one value to a list
 
     QS.push "a" (Number 2) Qs.empty
 
-- If the key is not a list then it will be promoted to a list
-- If the key doesn't exist then it will be added a list of one item
+  - If the key is not a list then it will be promoted to a list
+  - If the key doesn't exist then it will be added a list of one item
+
 -}
 push : String -> Primitive -> Query -> Query
 push key value query =
@@ -680,35 +644,31 @@ push key value query =
                 Nothing ->
                     [ value ]
     in
-        setList key newValues query
+    setList key newValues query
 
 
-{-|
-Add one string to a list
+{-| Add one string to a list
 -}
 pushStr : String -> String -> Query -> Query
 pushStr key value query =
     push key (Str value) query
 
 
-{-|
-Add one boolean to a list
+{-| Add one boolean to a list
 -}
 pushBool : String -> Bool -> Query -> Query
 pushBool key value query =
     push key (Boolean value) query
 
 
-{-|
-Add one number to a list
+{-| Add one number to a list
 -}
 pushNum : String -> Float -> Query -> Query
 pushNum key value query =
     push key (Number value) query
 
 
-{-|
-Remove a key from the query
+{-| Remove a key from the query
 -}
 remove : String -> Query -> Query
 remove key query =
@@ -721,8 +681,7 @@ remove key query =
 -------------------------------------------------------------------------------
 
 
-{-|
-Decode JSON into a QS.Query
+{-| Decode JSON into a QS.Query
 
     json =
         """{"a":["x", 1, true]}"""
@@ -734,6 +693,7 @@ Decode JSON into a QS.Query
     Dict.fromList [ ( "a", Many [ Str "x", Number 1, Boolean True ] ) ]
 
 This decoder doesn't handle nested values. Nested data will fail the decoder.
+
 -}
 decoder : Decoder Query
 decoder =
@@ -776,6 +736,7 @@ valueDecoder =
     ==
 
     """{"a":["x",true]}"""
+
 -}
 encode : Query -> Encode.Value
 encode query =
@@ -783,10 +744,10 @@ encode query =
         encodeQueryTuple ( key, val ) =
             ( key, encodeQueryValue val )
     in
-        query
-            |> Dict.toList
-            |> List.map encodeQueryTuple
-            |> Encode.object
+    query
+        |> Dict.toList
+        |> List.map encodeQueryTuple
+        |> Encode.object
 
 
 {-| @priv
@@ -832,10 +793,8 @@ boolToString =
 Decode one symbol in a string
 
     decodeSymbol ">" "hello%3Eworld"
+        == "hello>world"
 
-    ==
-
-    "hello>world"
 -}
 decodeSymbol : String -> String -> String
 decodeSymbol symbol =
@@ -843,13 +802,14 @@ decodeSymbol symbol =
         encoded =
             Http.encodeUri symbol
     in
-        Regex.replace Regex.All (Regex.regex encoded) (\_ -> symbol)
+    Regex.replace Regex.All (Regex.regex encoded) (\_ -> symbol)
 
 
 {-|
 
     encodeUri encodes = and &
     We want those as normal chars
+
 -}
 percentageEncode : Bool -> String -> String
 percentageEncode encodeBrackets =
@@ -857,12 +817,13 @@ percentageEncode encodeBrackets =
         maybeDecodeBrackets =
             if encodeBrackets then
                 identity
+
             else
                 decodeSymbol "["
                     >> decodeSymbol "]"
     in
-        Http.encodeUri
-            >> maybeDecodeBrackets
+    Http.encodeUri
+        >> maybeDecodeBrackets
 
 
 numberToString =

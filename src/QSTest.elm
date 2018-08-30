@@ -1,11 +1,12 @@
-module QSTest exposing (..)
+module QSTest exposing (all, decoderTest, decoderTests, encodeTest, encodeTests, parseTest, parseTests, pushStrTest, pushStrTests, serializeTest, serializeTests)
 
 import Dict
+import Expect
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Test exposing (..)
-import Expect
 import QS exposing (..)
+import Test exposing (..)
+
 
 
 -- parseQuery
@@ -123,8 +124,8 @@ parseTests =
               )
             ]
     in
-        List.map parseTest inputs
-            |> describe "parse"
+    List.map parseTest inputs
+        |> describe "parse"
 
 
 
@@ -188,8 +189,8 @@ serializeTests =
               )
             ]
     in
-        List.map serializeTest inputs
-            |> describe "serialize"
+    List.map serializeTest inputs
+        |> describe "serialize"
 
 
 decoderTest ( testCase, input, expected ) =
@@ -219,8 +220,8 @@ decoderTests =
               )
             ]
     in
-        List.map decoderTest inputs
-            |> describe "decoder"
+    List.map decoderTest inputs
+        |> describe "decoder"
 
 
 encodeTest ( testCase, input, expected ) =
@@ -242,8 +243,8 @@ encodeTests =
               )
             ]
     in
-        List.map encodeTest inputs
-            |> describe "encode"
+    List.map encodeTest inputs
+        |> describe "encode"
 
 
 pushStrTest ( testCase, initialQuery, key, input, expected ) =
@@ -277,8 +278,8 @@ pushStrTests =
               )
             ]
     in
-        List.map pushStrTest inputs
-            |> describe "pushStr"
+    List.map pushStrTest inputs
+        |> describe "pushStr"
 
 
 all : Test
