@@ -151,6 +151,11 @@ serializeTests =
             (Dict.fromList [ ( "a", One <| Str "x" ) ])
             "?a=x"
         , serializeTest
+            "one string with spaces"
+            config
+            (Dict.fromList [ ( "a", One <| Str "a b" ) ])
+            "?a=a%20b"
+        , serializeTest
             "two strings"
             config
             (Dict.fromList [ ( "a", One <| Str "y" ), ( "b", One <| Str "z" ) ])
@@ -160,6 +165,11 @@ serializeTests =
             config
             (Dict.fromList [ ( "a", Many [ Str "z", Str "y" ] ) ])
             "?a%5B%5D=z&a%5B%5D=y"
+        , serializeTest
+            "list of strings with spaces"
+            config
+            (Dict.fromList [ ( "a", Many [ Str "a b", Str "c d" ] ) ])
+            "?a%5B%5D=a%20b&a%5B%5D=c%20d"
         , serializeTest
             "do not encode brackets"
             (config |> encodeBrackets False)
