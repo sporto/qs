@@ -5,3 +5,4 @@
 ### Added:
 
 - Added `addQuestionMark`
+- Added 'has'

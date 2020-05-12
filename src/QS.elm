@@ -4,7 +4,7 @@ module QS exposing
     , Config, config, addQuestionMark, parseBooleans, parseNumbers, encodeBrackets
     , decoder, encode
     , empty
-    , get, getAsStringList
+    , get, getAsStringList, has
     , set, setOne, setStr, setBool, setNum
     , setList, setListStr, setListBool, setListNum
     , push, pushBool, pushNum, pushStr
@@ -37,7 +37,7 @@ module QS exposing
 # Transform
 
 @docs empty
-@docs get, getAsStringList
+@docs get, getAsStringList, has
 @docs set, setOne, setStr, setBool, setNum
 @docs setList, setListStr, setListBool, setListNum
 @docs push, pushBool, pushNum, pushStr
@@ -534,6 +534,19 @@ getAsStringList key query =
     in
     Maybe.map makeStringValues values
         |> Maybe.withDefault []
+
+
+{-| Tell if the query has the given key (regardless if one or many)
+
+    query =
+        Dict.fromList [ ("a", One (Boolean True) ]
+
+    QS.has "a" query == True
+
+-}
+has : String -> Query -> Bool
+has key query =
+    Dict.member key query
 
 
 {-| Merge two Querys.
