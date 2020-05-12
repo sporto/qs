@@ -1,7 +1,7 @@
 module QS exposing
     ( Query, OneOrMany(..), Primitive(..)
     , parse, serialize
-    , Config, config, parseBooleans, parseNumbers, encodeBrackets
+    , Config, config, addQuestionMark, parseBooleans, parseNumbers, encodeBrackets
     , decoder, encode
     , empty
     , get, getAsStringList
@@ -26,7 +26,7 @@ module QS exposing
 
 # Config
 
-@docs Config, config, parseBooleans, parseNumbers, encodeBrackets
+@docs Config, config, addQuestionMark, parseBooleans, parseNumbers, encodeBrackets
 
 
 # Decode and Encode
@@ -126,7 +126,8 @@ primitiveToString value =
 
 
 type alias ConfigPriv =
-    { encodeBrackets : Bool
+    { addQuestionMark : Bool
+    , encodeBrackets : Bool
     , parseBooleans : Bool
     , parseNumbers : Bool
     }
@@ -153,16 +154,31 @@ type Config
 config : Config
 config =
     Config
-        { encodeBrackets = True
+        { addQuestionMark = True
+        , encodeBrackets = True
         , parseBooleans = True
         , parseNumbers = True
         }
 
 
+{-| Wherever to add ? when serializing. Default is True.
+
+    QS.serialize Qs.config query
+        == "?a[]=1"
+
+    QS.serialize (Qs.config |> Qs.addQuestionMark False) query
+        == "a[]=1"
+
+-}
+addQuestionMark : Bool -> Config -> Config
+addQuestionMark val (Config cfg) =
+    Config { cfg | addQuestionMark = val }
+
+
 {-| Wherever to encode brackets or not
 
     QS.serialize (Qs.config |> Qs.encodeBrackets False) query
-        == "a[]=1&a[]=2"
+        == "?a[]=1&a[]=2"
 
 -}
 encodeBrackets : Bool -> Config -> Config
@@ -459,7 +475,11 @@ serialize (Config cfg) query =
                     |> List.foldl addKey []
                     |> String.join "&"
         in
-        "?" ++ processedValues
+        if cfg.addQuestionMark then
+            "?" ++ processedValues
+
+        else
+            processedValues
 
 
 

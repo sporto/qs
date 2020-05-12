@@ -1,7 +1,7 @@
 module Main exposing (..)
 
-import Test exposing (..)
 import QSTest
+import Test exposing (..)
 
 
 suite : Test

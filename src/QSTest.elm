@@ -1,4 +1,16 @@
-module QSTest exposing (all, decoderTest, decoderTests, encodeTest, encodeTests, parseTest, parseTests, pushStrTest, pushStrTests, serializeTest, serializeTests)
+module QSTest exposing
+    ( all
+    , decoderTest
+    , decoderTests
+    , encodeTest
+    , encodeTests
+    , parseTest
+    , parseTests
+    , pushStrTest
+    , pushStrTests
+    , serializeTest
+    , serializeTests
+    )
 
 import Dict
 import Expect
@@ -200,6 +212,11 @@ serializeTests =
             config
             (Dict.fromList [ ( "a", Many [ Number 1, Number 2 ] ) ])
             "?a%5B%5D=1&a%5B%5D=2"
+        , serializeTest
+            "it can serialize without ?"
+            (config |> addQuestionMark False)
+            (Dict.fromList [ ( "a", One <| Number 1 ) ])
+            "a=1"
         ]
 
 

@@ -35,11 +35,11 @@ Convert a QS.Query to a query string
 query =
     Dict.fromList
         [ ( "a", QueryString "1" )
-        , ( "b", QueryString "2" ) 
+        , ( "b", QueryString "2" )
         ]
 
 QS.serialize
-    Qs.config 
+    Qs.config
     query
 
 ==
