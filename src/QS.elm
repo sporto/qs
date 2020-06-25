@@ -4,7 +4,7 @@ module QS exposing
     , Config, config, addQuestionMark, parseBooleans, parseNumbers, encodeBrackets
     , decoder, encode
     , empty
-    , get, getAsStringList, has
+    , get, getAsStringList, getAsMaybeStringList, has
     , set, setOne, setStr, setBool, setNum
     , setList, setListStr, setListBool, setListNum
     , push, pushBool, pushNum, pushStr
@@ -37,7 +37,7 @@ module QS exposing
 # Transform
 
 @docs empty
-@docs get, getAsStringList, has
+@docs get, getAsStringList, getAsMaybeStringList, has
 @docs set, setOne, setStr, setBool, setNum
 @docs setList, setListStr, setListBool, setListNum
 @docs push, pushBool, pushNum, pushStr
@@ -506,7 +506,8 @@ get key query =
     Dict.get key query
 
 
-{-| Get values from the query as a list of strings (regardless if one or many)
+{-| Get values from the query as a list of strings (regardless if one or many).
+If keys are not present this defaults to an empty list
 
     query =
         Dict.fromList [ ("a", Many [Boolean True, Number 1]) ]
@@ -520,6 +521,25 @@ get key query =
 -}
 getAsStringList : String -> Query -> List String
 getAsStringList key query =
+    getAsMaybeStringList key query
+        |> Maybe.withDefault []
+
+
+{-| Get values from the query as a maybe list of strings.
+If keys are not present this returns a Nothing
+
+    query =
+        Dict.fromList [ ("a", Many [Boolean True, Number 1]) ]
+
+    QS.getAsStringList "a" query
+
+    ==
+
+    Just ["true", "1"]
+
+-}
+getAsMaybeStringList : String -> Query -> Maybe (List String)
+getAsMaybeStringList key query =
     let
         values =
             get key query
@@ -533,7 +553,6 @@ getAsStringList key query =
                     List.map primitiveToString list
     in
     Maybe.map makeStringValues values
-        |> Maybe.withDefault []
 
 
 {-| Tell if the query has the given key (regardless if one or many)

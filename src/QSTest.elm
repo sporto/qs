@@ -26,7 +26,7 @@ import Test exposing (..)
 
 parseTest testCase config input expected =
     test testCase <|
-        \() ->
+        \_ ->
             Expect.equal expected (parse config input)
 
 
@@ -150,7 +150,7 @@ parseTests =
 
 serializeTest testCase config input expected =
     test testCase <|
-        \() ->
+        \_ ->
             Expect.equal expected (serialize config input)
 
 
@@ -222,7 +222,7 @@ serializeTests =
 
 decoderTest testCase input expected =
     test testCase <|
-        \() ->
+        \_ ->
             Expect.equal expected (Decode.decodeString decoder input)
 
 
@@ -249,7 +249,7 @@ decoderTests =
 
 encodeTest testCase input expected =
     test testCase <|
-        \() ->
+        \_ ->
             Expect.equal expected (Encode.encode 0 <| encode input)
 
 
@@ -268,7 +268,7 @@ encodeTests =
 
 pushStrTest testCase initialQuery key input expected =
     test testCase <|
-        \() ->
+        \_ ->
             Expect.equal
                 expected
                 (pushStr key input initialQuery)
@@ -297,6 +297,54 @@ pushStrTests =
         ]
 
 
+getAsStringListTest testCase query key expected =
+    test testCase <|
+        \_ ->
+            Expect.equal
+                expected
+                (getAsStringList key query)
+
+
+getAsStringListTests =
+    describe
+        "getAsStringList"
+        [ getAsStringListTest
+            "It returns the list"
+            (Dict.fromList [ ( "a", Many [ Str "x", Str "y" ] ) ])
+            "a"
+            [ "x", "y" ]
+        , getAsStringListTest
+            "It returns an empty list when there are not keys"
+            Dict.empty
+            "a"
+            []
+        ]
+
+
+getAsMaybeStringListTest testCase query key expected =
+    test testCase <|
+        \_ ->
+            Expect.equal
+                expected
+                (getAsMaybeStringList key query)
+
+
+getAsMaybeStringListTests =
+    describe
+        "getAsMaybeStringList"
+        [ getAsMaybeStringListTest
+            "It returns the list"
+            (Dict.fromList [ ( "a", Many [ Str "x", Str "y" ] ) ])
+            "a"
+            (Just [ "x", "y" ])
+        , getAsMaybeStringListTest
+            "It Nothing when there are not keys"
+            Dict.empty
+            "a"
+            Nothing
+        ]
+
+
 all : Test
 all =
     describe "QS"
@@ -305,4 +353,6 @@ all =
         , decoderTests
         , encodeTests
         , pushStrTests
+        , getAsStringListTests
+        , getAsMaybeStringListTests
         ]
