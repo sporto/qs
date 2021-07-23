@@ -37,17 +37,17 @@ parseTests =
           parseTest "one string"
             config
             "?a=x"
-            (Dict.fromList [ ( "a", One <| Str "x" ) ])
+            (Dict.fromList [ ( "a", One "x" ) ])
         , parseTest
             "two strings"
             config
             "?a=y&b=z"
-            (Dict.fromList [ ( "a", One <| Str "y" ), ( "b", One <| Str "z" ) ])
+            (Dict.fromList [ ( "a", One "y" ), ( "b", One "z" ) ])
         , parseTest
             "a list of strings"
             config
             "?a%5B%5D=y&a%5B%5D=z"
-            (Dict.fromList [ ( "a", Many [ Str "y", Str "z" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "y", "z" ] ) ])
 
         -- Booleans
         , parseTest
@@ -55,17 +55,8 @@ parseTests =
             config
             "?a=true&b=false"
             (Dict.fromList
-                [ ( "a", One <| Boolean True )
-                , ( "b", One <| Boolean False )
-                ]
-            )
-        , parseTest
-            "booleans as strings"
-            (config |> parseBooleans False)
-            "?a=true&b=false"
-            (Dict.fromList
-                [ ( "a", One <| Str "true" )
-                , ( "b", One <| Str "false" )
+                [ ( "a", One "true" )
+                , ( "b", One "false" )
                 ]
             )
         , parseTest
@@ -73,15 +64,7 @@ parseTests =
             config
             "?a[]=true&a[]=false"
             (Dict.fromList
-                [ ( "a", Many [ Boolean True, Boolean False ] )
-                ]
-            )
-        , parseTest
-            "list of booleans as strings"
-            (config |> parseBooleans False)
-            "?a[]=true&a[]=false"
-            (Dict.fromList
-                [ ( "a", Many [ Str "true", Str "false" ] )
+                [ ( "a", Many [ "true", "false" ] )
                 ]
             )
 
@@ -91,15 +74,7 @@ parseTests =
             config
             "?a=1"
             (Dict.fromList
-                [ ( "a", One <| Number 1 )
-                ]
-            )
-        , parseTest
-            "parse number as string"
-            (config |> parseNumbers False)
-            "?a=1"
-            (Dict.fromList
-                [ ( "a", One <| Str "1" )
+                [ ( "a", One "1" )
                 ]
             )
 
@@ -109,16 +84,8 @@ parseTests =
             config
             "?a%5B%5D=1&a%5B%5D=2&b=3"
             (Dict.fromList
-                [ ( "a", Many [ Number 1, Number 2 ] )
-                , ( "b", One <| Number 3 )
-                ]
-            )
-        , parseTest
-            "list of mixed booleans and strings"
-            config
-            "?a[]=true&a[]=falso"
-            (Dict.fromList
-                [ ( "a", Many [ Boolean True, Str "falso" ] )
+                [ ( "a", Many [ "1", "2" ] )
+                , ( "b", One "3" )
                 ]
             )
 
@@ -127,7 +94,7 @@ parseTests =
             "missing ?"
             config
             "a=z&b=2"
-            (Dict.fromList [ ( "a", One <| Str "z" ), ( "b", One <| Number 2 ) ])
+            (Dict.fromList [ ( "a", One "z" ), ( "b", One "2" ) ])
         , parseTest
             "rubish"
             config
@@ -138,7 +105,7 @@ parseTests =
             config
             "33monkey*^222&a=1"
             (Dict.fromList
-                [ ( "a", One <| Number 1 )
+                [ ( "a", One "1" )
                 ]
             )
         ]
@@ -160,62 +127,62 @@ serializeTests =
         [ serializeTest
             "one string"
             config
-            (Dict.fromList [ ( "a", One <| Str "x" ) ])
+            (Dict.fromList [ ( "a", One "x" ) ])
             "?a=x"
         , serializeTest
             "one string with spaces"
             config
-            (Dict.fromList [ ( "a", One <| Str "a b" ) ])
+            (Dict.fromList [ ( "a", One "a b" ) ])
             "?a=a%20b"
         , serializeTest
             "two strings"
             config
-            (Dict.fromList [ ( "a", One <| Str "y" ), ( "b", One <| Str "z" ) ])
+            (Dict.fromList [ ( "a", One "y" ), ( "b", One "z" ) ])
             "?a=y&b=z"
         , serializeTest
             "list of strings"
             config
-            (Dict.fromList [ ( "a", Many [ Str "z", Str "y" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "z", "y" ] ) ])
             "?a%5B%5D=z&a%5B%5D=y"
         , serializeTest
             "list of strings with spaces"
             config
-            (Dict.fromList [ ( "a", Many [ Str "a b", Str "c d" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "a b", "c d" ] ) ])
             "?a%5B%5D=a%20b&a%5B%5D=c%20d"
         , serializeTest
             "do not encode brackets"
             (config |> encodeBrackets False)
-            (Dict.fromList [ ( "a", Many [ Str "1", Str "2" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "1", "2" ] ) ])
             "?a[]=1&a[]=2"
         , serializeTest
             "brackets in value are always encoded"
             (config |> encodeBrackets False)
-            (Dict.fromList [ ( "a", Many [ Str "1[]", Str "2" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "1[]", "2" ] ) ])
             "?a[]=1%5B%5D&a[]=2"
         , serializeTest
             "boolean"
             config
-            (Dict.fromList [ ( "a", One <| Boolean True ) ])
+            (Dict.fromList [ ( "a", One "true" ) ])
             "?a=true"
         , serializeTest
             "list of booleans"
             config
-            (Dict.fromList [ ( "a", Many [ Boolean True, Boolean False ] ) ])
+            (Dict.fromList [ ( "a", Many [ "true", "false" ] ) ])
             "?a%5B%5D=true&a%5B%5D=false"
         , serializeTest
             "number"
             config
-            (Dict.fromList [ ( "a", One <| Number 1 ) ])
+            (Dict.fromList [ ( "a", One "1" ) ])
             "?a=1"
         , serializeTest
             "list of numbers"
             config
-            (Dict.fromList [ ( "a", Many [ Number 1, Number 2 ] ) ])
+            (Dict.fromList [ ( "a", Many [ "1", "2" ] ) ])
             "?a%5B%5D=1&a%5B%5D=2"
         , serializeTest
             "it can serialize without ?"
             (config |> addQuestionMark False)
-            (Dict.fromList [ ( "a", One <| Number 1 ) ])
+            (Dict.fromList [ ( "a", One "1" ) ])
             "a=1"
         ]
 
@@ -231,19 +198,19 @@ decoderTests =
         [ decoderTest
             "It decodes text"
             """{"a":"x"}"""
-            (Ok <| Dict.fromList [ ( "a", One <| Str "x" ) ])
+            (Ok <| Dict.fromList [ ( "a", One "x" ) ])
         , decoderTest
             "It decodes number"
-            """{"a":1}"""
-            (Ok <| Dict.fromList [ ( "a", One <| Number 1 ) ])
+            """{"a":"1"}"""
+            (Ok <| Dict.fromList [ ( "a", One "1" ) ])
         , decoderTest
             "It decodes boolean"
-            """{"a":true}"""
-            (Ok <| Dict.fromList [ ( "a", One <| Boolean True ) ])
+            """{"a":"true"}"""
+            (Ok <| Dict.fromList [ ( "a", One "true" ) ])
         , decoderTest
             "It decodes a list"
-            """{"a":["x", 1, true]}"""
-            (Ok <| Dict.fromList [ ( "a", Many [ Str "x", Number 1, Boolean True ] ) ])
+            """{"a":["x", "1", "true"]}"""
+            (Ok <| Dict.fromList [ ( "a", Many [ "x", "1", "true" ] ) ])
         ]
 
 
@@ -257,12 +224,12 @@ encodeTests =
     describe "encode"
         [ encodeTest
             "It encodes one"
-            (Dict.fromList [ ( "a", One <| Str "x" ) ])
+            (Dict.fromList [ ( "a", One "x" ) ])
             """{"a":"x"}"""
         , encodeTest
             "It encodes a list"
-            (Dict.fromList [ ( "a", Many [ Str "x", Number 1, Boolean True ] ) ])
-            """{"a":["x",1,true]}"""
+            (Dict.fromList [ ( "a", Many [ "x", "1", "true" ] ) ])
+            """{"a":["x","1","true"]}"""
         ]
 
 
@@ -278,22 +245,22 @@ pushStrTests =
     describe "pushStr"
         [ pushStrTest
             "It adds to an existing list"
-            (Dict.fromList [ ( "a", Many [ Str "x" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "x" ] ) ])
             "a"
             "z"
-            (Dict.fromList [ ( "a", Many [ Str "x", Str "z" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "x", "z" ] ) ])
         , pushStrTest
             "Adds new value"
             Dict.empty
             "a"
             "z"
-            (Dict.fromList [ ( "a", Many [ Str "z" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "z" ] ) ])
         , pushStrTest
             "Promotes a value"
-            (Dict.fromList [ ( "a", One <| Str "x" ) ])
+            (Dict.fromList [ ( "a", One "x" ) ])
             "a"
             "z"
-            (Dict.fromList [ ( "a", Many [ Str "x", Str "z" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "x", "z" ] ) ])
         ]
 
 
@@ -310,7 +277,7 @@ getAsStringListTests =
         "getAsStringList"
         [ getAsStringListTest
             "It returns the list"
-            (Dict.fromList [ ( "a", Many [ Str "x", Str "y" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "x", "y" ] ) ])
             "a"
             [ "x", "y" ]
         , getAsStringListTest
@@ -334,7 +301,7 @@ getAsMaybeStringListTests =
         "getAsMaybeStringList"
         [ getAsMaybeStringListTest
             "It returns the list"
-            (Dict.fromList [ ( "a", Many [ Str "x", Str "y" ] ) ])
+            (Dict.fromList [ ( "a", Many [ "x", "y" ] ) ])
             "a"
             (Just [ "x", "y" ])
         , getAsMaybeStringListTest
