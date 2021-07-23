@@ -3,7 +3,7 @@
     "name": "sporto/qs",
     "summary": "Parse and serialize query strings",
     "license": "MIT",
-    "version": "1.2.0",
+    "version": "2.0.0",
     "exposed-modules": [
         "QS"
     ],
