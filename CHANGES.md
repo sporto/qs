@@ -2,6 +2,10 @@
 
 ## 2.0.0
 
+- Do not trim empty spaces on values. These spaces can be semantically valid.
+
+## 2.0.0
+
 - Removed `Primitive`. All values now parse into a `String`
 
 In version 1 this lib will attempt to automatically parse numbers and booleans. You could turn all these on or off, but there was no way to configure this for certain keys.

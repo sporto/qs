@@ -48,6 +48,11 @@ parseTests =
             config
             "?a%5B%5D=y&a%5B%5D=z"
             (Dict.fromList [ ( "a", Many [ "y", "z" ] ) ])
+        , parseTest
+            "string with space"
+            config
+            "?a=%20x"
+            (Dict.fromList [ ( "a", One " x" ) ])
 
         -- Booleans
         , parseTest
@@ -134,6 +139,11 @@ serializeTests =
             config
             (Dict.fromList [ ( "a", One "a b" ) ])
             "?a=a%20b"
+        , serializeTest
+            "string with leading space"
+            config
+            (Dict.fromList [ ( "a", One " b" ) ])
+            "?a=%20b"
         , serializeTest
             "two strings"
             config

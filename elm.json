@@ -3,7 +3,7 @@
     "name": "sporto/qs",
     "summary": "Parse and serialize query strings",
     "license": "MIT",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "exposed-modules": [
         "QS"
     ],
@@ -15,6 +15,6 @@
         "elm/url": "1.0.0 <= v < 2.0.0"
     },
     "test-dependencies": {
-        "elm-explorations/test": "1.2.2 <= v < 2.0.0"
+        "elm-explorations/test": "2.0.0 <= v < 3.0.0"
     }
 }

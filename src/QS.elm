@@ -240,17 +240,15 @@ addUniqueValToQuery cfg key val query =
 rawValueToValue : ConfigPriv -> String -> Maybe String
 rawValueToValue cfg val =
     let
-        trimmed =
-            String.trim val
-
         isEmpty =
-            trimmed == ""
+            String.trim val == ""
     in
     if isEmpty then
         Nothing
 
     else
-        Just trimmed
+        -- Empty space can be a valid part of the value
+        Just val
 
 
 {-| @priv
